@@ -7,6 +7,12 @@
 
 package frc.robot;
 
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
+import edu.wpi.first.apriltag.AprilTagDetector;
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.CvSink;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -28,8 +34,43 @@ public class Robot extends TimedRobot {
 
   private RobotContainer m_robotContainer;
 
+  private AprilTagDetector m_detector;
+  private Thread visionThread;
+
   @Override
-  public void robotInit() {
+public void robotInit() {
+    //Camera Stuff
+    CameraServer.startAutomaticCapture();
+
+    m_detector = new AprilTagDetector();
+    m_detector.addFamily("tag36h11");
+
+    visionThread = new Thread(() -> {
+          CvSink cvSink = CameraServer.getVideo();
+          Mat source = new Mat();
+          Mat grey = new Mat();
+
+          while (!Thread.interrupted()) {
+            if (cvSink.grabFrame(source) == 0) continue; // Skip if no frame
+
+            // Convert to grayscale for faster processing
+            Imgproc.cvtColor(source, grey, Imgproc.COLOR_BGR2GRAY);
+
+            // Run detection
+            var detections = m_detector.detect(grey);
+          
+            for (var detection : detections) {
+              // Access the ID of the tag (e.g., ID 1-22 for 2026)
+              int tagId = detection.getId();
+              System.out.println("TagID "+ tagId);
+              // Log or pass tagId to your RobotContainer/Drivetrain
+            }
+              source.release();
+              grey.release();
+          }
+        });
+        visionThread.start();
+
     m_robotContainer = new RobotContainer();
   }
 
