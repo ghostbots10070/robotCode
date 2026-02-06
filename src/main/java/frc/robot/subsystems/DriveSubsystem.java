@@ -45,7 +45,7 @@ public class DriveSubsystem extends SubsystemBase {
    private boolean halfSpeed = false;
   
    //motors
-   private final SparkMax ejectMotor;
+   private final SparkMax neoMotor;
   
    private final SparkMax leftLeader;
    private final SparkMax leftFollower;
@@ -59,7 +59,7 @@ public class DriveSubsystem extends SubsystemBase {
    private final SparkMaxConfig rightLeaderConfig = new SparkMaxConfig();
    private final SparkMaxConfig rightFollowerConfig = new SparkMaxConfig();
    // private final SparkMaxConfig driveConfig = new SparkMaxConfig();
-   private final SparkMaxConfig ejectConfig = new SparkMaxConfig();
+   private final SparkMaxConfig neoConfig = new SparkMaxConfig();
 
 
    //encoders
@@ -98,15 +98,15 @@ public class DriveSubsystem extends SubsystemBase {
    //init gyro
    m_gyro = new AHRS(NavXComType.kMXP_SPI);
 
-
+   m_gyro.resetDisplacement();
    //init motor
-   ejectMotor = new SparkMax(5, MotorType.kBrushed);
+   neoMotor = new SparkMax(5, MotorType.kBrushless);
 
 
-   leftLeader = new SparkMax(1, MotorType.kBrushed);
-   leftFollower = new SparkMax(2, MotorType.kBrushed);
-   rightLeader = new SparkMax(3, MotorType.kBrushed);
-   rightFollower = new SparkMax(4, MotorType.kBrushed);
+   leftLeader = new SparkMax(1, MotorType.kBrushless);
+   leftFollower = new SparkMax(2, MotorType.kBrushless);
+   rightLeader = new SparkMax(3, MotorType.kBrushless);
+   rightFollower = new SparkMax(4, MotorType.kBrushless);
 
    rightLeaderConfig.inverted(true);
    rightFollowerConfig.inverted(true);
@@ -173,9 +173,9 @@ public class DriveSubsystem extends SubsystemBase {
    // leftLeader.configure(driveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
 
-   ejectConfig.smartCurrentLimit(60);
-   ejectConfig.voltageCompensation(10);
-   ejectMotor.configure(ejectConfig, ResetMode.kResetSafeParameters,
+   neoConfig.smartCurrentLimit(60);
+   neoConfig.voltageCompensation(10);
+   neoMotor.configure(neoConfig, ResetMode.kResetSafeParameters,
    PersistMode.kPersistParameters);
 
 
@@ -301,17 +301,31 @@ public class DriveSubsystem extends SubsystemBase {
       myDrive.arcadeDrive(leftSpeed, rightSpeed);
     }
 
-    public void eject(boolean light, boolean hard){
-      if(hard){
-        ejectMotor.set(0.60);
-      }else if(light){
-        ejectMotor.set(0.35);
-      }else{
-        ejectMotor.set(0);
+    public void eject(boolean light, boolean hard, boolean reverse){
+      double power = 0.0;
+      if (hard) {
+        power = 0.60;
+      } else if (light) {
+        power = 0.35;
       }
+
+      if (reverse) {
+        // If a forward eject power exists, invert it. Otherwise, run a light reverse
+        // so the A button alone can back the mechanism out.
+        if (power == 0.0) {
+          power = -0.35;
+        } else {
+          power = -power;
+        }
+      }
+        // publish eject debug info
+        SmartDashboard.putNumber("Eject Power", power);
+        SmartDashboard.putBoolean("Eject Reverse Flag", reverse);
+
+        neoMotor.set(power);
     }
 
-    public void drive(boolean half, boolean light, boolean hard, double leftSpeed, double rightSpeed){
+    public void drive(boolean half, boolean light, boolean hard, boolean reverseEject, double leftSpeed, double rightSpeed){
       int divider;
       if (half){
         halfSpeed = !halfSpeed;
@@ -322,7 +336,7 @@ public class DriveSubsystem extends SubsystemBase {
         divider = 1;
       }
       arcadeDrive(leftSpeed / divider, rightSpeed / divider);
-      eject(light, hard);
+      eject(light, hard, reverseEject);
     }
 
 
@@ -428,6 +442,13 @@ public class DriveSubsystem extends SubsystemBase {
            DriveConstants.kDrivetrainPositionPIDSlot);
      }
 
+     public void postCords() {
+       SmartDashboard.putNumber("Robot X", getPose().getX());
+       SmartDashboard.putNumber("Robot Y", getPose().getY());
+       SmartDashboard.putNumber("Robot Rot", getPose().getRotation().getDegrees());
+     }
+
+
      @Override
      public void periodic() {
       if (gyroZeroPending && !m_gyro.isCalibrating()) {
@@ -437,5 +458,14 @@ public class DriveSubsystem extends SubsystemBase {
       // Update the odometry in the periodic block
       m_driveOdometry.update(getRotation2d(), getPositionLeft(), getPositionRight());
       m_field.setRobotPose(getPose());
+      double x = m_gyro.getDisplacementX();
+      double y = m_gyro.getDisplacementY();
+
+      SmartDashboard.putNumber("navX X", x);
+      SmartDashboard.putNumber("navX Y", y);
+      
+      
+      
+      postCords();
     }
  }
