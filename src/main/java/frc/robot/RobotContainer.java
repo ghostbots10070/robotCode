@@ -24,7 +24,7 @@ public class RobotContainer {
    private final SendableChooser<Command> autoChooser;
 
 
-   private final ArcadeDrive m_arcadeDrive = new ArcadeDrive(m_driveSubsystem, this::getControllerLeftY, this::getControllerRightX, this::getControllerLeftB, this::getControllerBButton, this::getControllerXButton);
+  private final ArcadeDrive m_arcadeDrive = new ArcadeDrive(m_driveSubsystem, this::getControllerLeftY, this::getControllerRightX, this::getControllerLeftB, this::getControllerBButton, this::getControllerXButton, this::getControllerAButton);
 
    public RobotContainer() {
      // Build an auto chooser. This will use Commands.none() as the default option.
@@ -42,13 +42,12 @@ public class RobotContainer {
 
 
     public double getControllerLeftY() {
-      return -gamepad0.getLeftY();
+      return gamepad0.getLeftY();
     }
     public double getControllerRightX() {
-      return -gamepad0.getRightX();
+      return gamepad0.getRightX();
     }
     public boolean getControllerLeftB() {
-      System.out.println("working");
       return gamepad0.getLeftBumperButton();
     }
     public boolean getControllerBButton() {
@@ -56,5 +55,8 @@ public class RobotContainer {
     }
     public boolean getControllerXButton() {
       return gamepad0.getXButton();
+    }
+    public boolean getControllerAButton() {
+      return gamepad0.getAButton();
     }
 }
