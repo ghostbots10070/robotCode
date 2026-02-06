@@ -16,6 +16,7 @@ public class ArcadeDrive extends Command {
   private final BooleanSupplier m_left_b; // this gives us the left y axis for current controller
   private final BooleanSupplier m_b_button; // this gives us the right y axis for current controller
   private final BooleanSupplier m_x_button; // this gives us the left y axis for current controller
+  private final BooleanSupplier m_a_button; // A button to reverse eject motor
 
   /**
    * Creates a new DefaultDrive command.
@@ -26,14 +27,16 @@ public class ArcadeDrive extends Command {
    * @param xbox_left_b A function that returns the value of the left y axis for the joystick.
    * @param xbox_b_button
    * @param xbox_x_button
+   *
    */
-  public ArcadeDrive(DriveSubsystem d_subsystem, DoubleSupplier xbox_left_y, DoubleSupplier xbox_right_x, BooleanSupplier xbox_left_b, BooleanSupplier xbox_b_button, BooleanSupplier xbox_x_button) {
+  public ArcadeDrive(DriveSubsystem d_subsystem, DoubleSupplier xbox_left_y, DoubleSupplier xbox_right_x, BooleanSupplier xbox_left_b, BooleanSupplier xbox_b_button, BooleanSupplier xbox_x_button, BooleanSupplier xbox_a_button) {
     m_driveSubsystem = d_subsystem;
     m_left_y = xbox_left_y;
     m_right_x = xbox_right_x;
     m_left_b = xbox_left_b; // this gives us the left y axis for current controller
     m_b_button = xbox_b_button; // this gives us the right y axis for current controller
     m_x_button = xbox_x_button; // this gives us the left y axis for current controller
+    m_a_button = xbox_a_button; // A button to reverse eject motor
     // Use addRequirements() here to declare subsystem dependencies.
     addRequirements(d_subsystem);
   }
@@ -47,7 +50,12 @@ public class ArcadeDrive extends Command {
   public void execute() {
     // we include a limit on the drivers speed for safety.
     // Additonally the axis's on the
-    m_driveSubsystem.drive(m_left_b.getAsBoolean(), m_x_button.getAsBoolean(), m_b_button.getAsBoolean(), m_left_y.getAsDouble(), m_right_x.getAsDouble());
+    // publish raw button states for debugging
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putBoolean("A Button Raw", m_a_button.getAsBoolean());
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putBoolean("X Button Raw", m_x_button.getAsBoolean());
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putBoolean("B Button Raw", m_b_button.getAsBoolean());
+
+    m_driveSubsystem.drive(m_left_b.getAsBoolean(), m_x_button.getAsBoolean(), m_b_button.getAsBoolean(), m_a_button.getAsBoolean(), m_left_y.getAsDouble(), m_right_x.getAsDouble());
   }
 
   // Called once the command ends or is interrupted.
