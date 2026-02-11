@@ -24,7 +24,9 @@ public class RobotContainer {
    private final SendableChooser<Command> autoChooser;
 
 
-  private final ArcadeDrive m_arcadeDrive = new ArcadeDrive(m_driveSubsystem, this::getControllerLeftY, this::getControllerRightX, this::getControllerLeftB, this::getControllerBButton, this::getControllerXButton, this::getControllerAButton);
+  private final ArcadeDrive m_arcadeDrive = new ArcadeDrive(m_driveSubsystem, this::getControllerLeftY, this::getControllerRightX, this::getControllerLeftB, this::getControllerBButton, this::getControllerXButton, this::getControllerAButton, this::getControllerStartButton);
+
+     /** The container for the robot. Contains subsystems, OI devices, and commands. */
 
    public RobotContainer() {
      // Build an auto chooser. This will use Commands.none() as the default option.
@@ -58,5 +60,8 @@ public class RobotContainer {
     }
     public boolean getControllerAButton() {
       return gamepad0.getAButton();
+    }
+    public boolean getControllerStartButton() {
+      return gamepad0.getStartButton();
     }
 }
