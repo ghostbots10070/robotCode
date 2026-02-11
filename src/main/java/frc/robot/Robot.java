@@ -45,7 +45,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotInit() {
-      m_detector = new AprilTagDetector();
+      /*m_detector = new AprilTagDetector();
       m_detector.addFamily("tag36h11");
 
       visionThread = new Thread(
@@ -100,7 +100,7 @@ public class Robot extends TimedRobot {
           });
           visionThread.setDaemon(true);
           visionThread.start();
-
+*/
       m_robotContainer = new RobotContainer();
     }
 
