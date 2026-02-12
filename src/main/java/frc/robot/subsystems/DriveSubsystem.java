@@ -291,8 +291,35 @@ public class DriveSubsystem extends SubsystemBase {
 
         // 5. Send to Motor Control
         if (m_closedLoopMode) {
+            Double setHeading = SmartDashboard.getNumber("heading", 0);
+            System.out.println("Heading: " + setHeading.doubleValue());
+
+            double currentHeading = getRotation2d().getDegrees();
+
+            if (setHeading != 0.0) {
+
+        double error = setHeading - currentHeading;
+
+        // Handle wraparound manually (NavX is -180 to 180)
+        if (error > 180) error -= 360;
+        if (error < -180) error += 360;
+
+        // Simple proportional control (NO PID class)
+        double kP = 0.02;   // Tune this
+        correctedRotation = kP * error;
+
+        // Clamp so it doesn’t spin violently
+        correctedRotation = MathUtil.clamp(correctedRotation, -0.5, 0.5);
+
+        // Stop when close
+        if (Math.abs(error) < 2.0) {
+            correctedRotation = 0.0;
+        }
+    }
             // Velocity Control (Meters Per Second)
             driveVelocity(finalFwd, correctedRotation);
+
+
         } else {
             // Voltage/Percent Control
             arcadeDrive(finalFwd, correctedRotation);
@@ -349,13 +376,13 @@ public class DriveSubsystem extends SubsystemBase {
 
         // PID + Feedforward
         // Since voltageCompensation is 12.0, the SparkMax handles the Volts to Duty Cycle conversion
-        m_leftLeaderPIDController.setReference(
+        m_leftLeaderPIDController.setSetpoint(
                 leftSpeed,
                 SparkBase.ControlType.kVelocity,
                 DriveConstants.kDrivetrainVelocityPIDSlot,
                 leftFF);
         
-        m_rightLeaderPIDController.setReference(
+        m_rightLeaderPIDController.setSetpoint(
                 rightSpeed,
                 SparkBase.ControlType.kVelocity,
                 DriveConstants.kDrivetrainVelocityPIDSlot,
@@ -363,57 +390,23 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     private void configureMotorPIDControllers() {
-        // setup velocity PID controllers (used by auto and Closed Loop Teleop)
-        leftLeaderConfig.closedLoop.pid(
-                DriveConstants.kPDriveVel,
-                DriveConstants.kIDriveVel,
-                DriveConstants.kDDriveVel,
-                DriveConstants.kDrivetrainVelocityPIDSlot);
-        rightLeaderConfig.closedLoop.pid(
-                DriveConstants.kPDriveVel,
-                DriveConstants.kIDriveVel,
-                DriveConstants.kDDriveVel,
-                DriveConstants.kDrivetrainVelocityPIDSlot);
-        
-        leftLeaderConfig.closedLoop.iZone(
-                DriveConstants.kIzDriveVel, DriveConstants.kDrivetrainVelocityPIDSlot);
-        rightLeaderConfig.closedLoop.iZone(
-                DriveConstants.kIzDriveVel, DriveConstants.kDrivetrainVelocityPIDSlot);
-        
-        leftLeaderConfig.closedLoop.outputRange(
-                DriveConstants.kMinOutputDrive,
-                DriveConstants.kMaxOutputDrive,
-                DriveConstants.kDrivetrainVelocityPIDSlot);
-        rightLeaderConfig.closedLoop.outputRange(
-                DriveConstants.kMinOutputDrive,
-                DriveConstants.kMaxOutputDrive,
-                DriveConstants.kDrivetrainVelocityPIDSlot);
+        applyPIDConfig(leftLeaderConfig);
+        applyPIDConfig(rightLeaderConfig);
+    }
 
-        // setup position PID controllers
-        leftLeaderConfig.closedLoop.pid(
-                DriveConstants.kPDrivePos,
-                DriveConstants.kIDrivePos,
-                DriveConstants.kDDrivePos,
-                DriveConstants.kDrivetrainPositionPIDSlot);
-        rightLeaderConfig.closedLoop.pid(
-                DriveConstants.kPDrivePos,
-                DriveConstants.kIDrivePos,
-                DriveConstants.kDDrivePos,
-                DriveConstants.kDrivetrainPositionPIDSlot);
+    // Helper method to apply identical settings to any config object
+    private void applyPIDConfig(SparkMaxConfig config) {
+        // Velocity Slot
+        config.closedLoop
+            .pid(DriveConstants.kPDriveVel, DriveConstants.kIDriveVel, DriveConstants.kDDriveVel, DriveConstants.kDrivetrainVelocityPIDSlot)
+            .iZone(DriveConstants.kIzDriveVel, DriveConstants.kDrivetrainVelocityPIDSlot)
+            .outputRange(DriveConstants.kMinOutputDrive, DriveConstants.kMaxOutputDrive, DriveConstants.kDrivetrainVelocityPIDSlot);
 
-        leftLeaderConfig.closedLoop.iZone(
-                DriveConstants.kIzDrivePos, DriveConstants.kDrivetrainPositionPIDSlot);
-        rightLeaderConfig.closedLoop.iZone(
-                DriveConstants.kIzDrivePos, DriveConstants.kDrivetrainPositionPIDSlot);
-        
-        leftLeaderConfig.closedLoop.outputRange(
-                DriveConstants.kMinOutputDrive,
-                DriveConstants.kMaxOutputDrive,
-                DriveConstants.kDrivetrainPositionPIDSlot);
-        rightLeaderConfig.closedLoop.outputRange(
-                DriveConstants.kMinOutputDrive,
-                DriveConstants.kMaxOutputDrive,
-                DriveConstants.kDrivetrainPositionPIDSlot);
+        // Position Slot
+        config.closedLoop
+            .pid(DriveConstants.kPDrivePos, DriveConstants.kIDrivePos, DriveConstants.kDDrivePos, DriveConstants.kDrivetrainPositionPIDSlot)
+            .iZone(DriveConstants.kIzDrivePos, DriveConstants.kDrivetrainPositionPIDSlot)
+            .outputRange(DriveConstants.kMinOutputDrive, DriveConstants.kMaxOutputDrive, DriveConstants.kDrivetrainPositionPIDSlot);
     }
 
     public void postCords() {

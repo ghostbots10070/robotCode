@@ -53,7 +53,7 @@ public final class DriveConstants {
     public static final double kDDriveVel = 0.0;
     public static final double kIzDriveVel = 0.0; // error before integral takes effect
 
-    public static final double kPDrivePos = 4.6269;
+    public static final double kPDrivePos = 8; //4.6269
     public static final double kIDrivePos = 0.0;
     public static final double kDDrivePos = 0.49649;
     public static final double kIzDrivePos = 0.0; // error before integral takes effect
