@@ -1,28 +1,30 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.ClimberSubsystem;
+import frc.robot.subsystems.FuelSubsystem;
+import frc.robot.subsystems.CameraSubsystem;
+
+
+
 import frc.robot.commands.ArcadeDrive;
+import static frc.robot.Constants.OperatorConstants.*;
 
 public class RobotContainer {
 
-    // private final DefaultDrive m_defaultDrive =
-    // new DefaultDrive(m_driveSubsystem, this::getControllerLeftY,
-    // this::getControllerRightY);
-
-        //private final XboxController gamepad0 = new XboxController(0);
-
-
     private final DriveSubsystem m_driveSubsystem = new DriveSubsystem();
-    private final CommandXboxController m_driverController = new CommandXboxController(0);
+    private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
+    private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
+    private final FuelSubsystem m_intakeSubsystem = new FuelSubsystem();
+
+
+    private final CommandXboxController m_driverController = new CommandXboxController(DRIVER_CONTROLLER_PORT);
 
     // Init For Autonomous
     private final SendableChooser<Command> autoChooser;

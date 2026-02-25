@@ -9,7 +9,7 @@ import com.revrobotics.spark.SparkMax;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import static frc.robot.Constants.ClimbConstatns.*;
+import static frc.robot.Constants.ClimbConstants.*;
 
 public class ClimberSubsystem extends SubsystemBase {
   private final SparkMax climberMotor;
