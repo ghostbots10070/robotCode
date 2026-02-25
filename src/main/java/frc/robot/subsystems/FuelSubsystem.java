@@ -16,13 +16,13 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static frc.robot.Constants.FuelConstants.*;
 
-public class ShooterSubsystem extends SubsystemBase {
+public class FuelSubsystem extends SubsystemBase {
   private final SparkMax LeftIntakeLauncher;
   private final SparkMax RightIntakeLauncher;
   private final SparkMax Indexer;
 
   /** Creates a new CANBallSubsystem. */
-  public ShooterSubsystem() {
+  public FuelSubsystem() {
     // create brushed motors for each of the motors on the launcher mechanism
     LeftIntakeLauncher = new SparkMax(LEFT_INTAKE_LAUNCHER_MOTOR_ID, MotorType.kBrushless);
     RightIntakeLauncher = new SparkMax(RIGHT_INTAKE_LAUNCHER_MOTOR_ID, MotorType.kBrushless);
@@ -57,6 +57,16 @@ public class ShooterSubsystem extends SubsystemBase {
     //SmartDashboard.putNumber("Spin-up feeder roller value", SPIN_UP_FEEDER_VOLTAGE);
   }
 
+  // A method to set the voltage of the intake roller
+  public void setIntakeLauncherRoller(double power) {
+    LeftIntakeLauncher.set(power);
+    RightIntakeLauncher.set(power); // positive for shooting
+  }
+
+  // A method to set the voltage of the intake roller
+  public void setFeederRoller(double power) {
+    Indexer.set(power); // positive for shooting
+  }
 
   // A method to stop the rollers
   public void stop() {

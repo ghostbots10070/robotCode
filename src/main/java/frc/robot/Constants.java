@@ -27,15 +27,15 @@ public final class Constants {
             try {
                 autoConfig = RobotConfig.fromGUISettings();
             } catch (Exception e) {
-                // Handle exception as needed
-                e.printStackTrace();
+                // Throw an actual exception so the robot doesn't silently boot with a broken auto config
+                throw new RuntimeException("Failed to load PathPlanner RobotConfig from GUI settings!", e);
             }
         }
 
         // Motor controller IDs for drivetrain motors
         public static final int LEFT_LEADER_ID = 1;
-        public static final int LEFT_FOLLOWER_ID = 3;
-        public static final int RIGHT_LEADER_ID = 2;
+        public static final int LEFT_FOLLOWER_ID = 2;
+        public static final int RIGHT_LEADER_ID = 3;
         public static final int RIGHT_FOLLOWER_ID = 4;
 
         // Current limit for drivetrain motors. 60A is a reasonable maximum to reduce
@@ -62,7 +62,7 @@ public final class Constants {
         // these
         // values for your robot.
         // Feed Forward Constants
-        public static final double ksDriveVolts = 0.19676;
+        public static final double ksDriveVolts = 0.0;
         public static final double kvDriveVoltSecondsPerMeter = 2.2623;
         public static final double kaDriveVoltSecondsSquaredPerMeter = 0.43785;
         public static final double kvDriveVoltSecondsPerMeterAngular = 1.2;
@@ -116,7 +116,7 @@ public final class Constants {
         public static final double SPIN_UP_SECONDS = 0.75;
     }
 
-    public static final class ClimbConstatns {
+    public static final class ClimbConstants {
         // Motor controller IDs for Climb motor
         public static final int CLIMBER_MOTOR_ID = 7;
 
