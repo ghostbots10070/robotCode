@@ -34,6 +34,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
@@ -44,6 +45,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import static frc.robot.Constants.DriveConstants.*;
 
@@ -226,7 +228,6 @@ public class DriveSubsystem extends SubsystemBase {
 
         // Calculate actual applied voltage
         double leftVoltage = leftLeader.getAppliedOutput() * RobotController.getBatteryVoltage();
-
         double rightVoltage = rightLeader.getAppliedOutput() * RobotController.getBatteryVoltage();
 
         log.motor("left")
@@ -266,6 +267,7 @@ public class DriveSubsystem extends SubsystemBase {
     public void toggleDriveMode() {
         m_closedLoopMode = !m_closedLoopMode;
         SmartDashboard.putBoolean("Closed Loop Mode", m_closedLoopMode);
+        DataLogManager.log("Toggled Drive Mode: " + (m_closedLoopMode ? "Closed Loop" : "Open Loop"));
     }
 
     public void toggleHalfSpeed() {
@@ -360,6 +362,14 @@ public class DriveSubsystem extends SubsystemBase {
                 rightFF);
     }
 
+    public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+        return m_sysIdRoutine.quasistatic(direction);
+    }
+
+    public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+        return m_sysIdRoutine.dynamic(direction);
+    }
+
     private void postCords() {
         Pose2d pose = m_driveOdometry.getEstimatedPosition();
 
@@ -367,6 +377,13 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Robot Y", pose.getY());
         SmartDashboard.putNumber("Robot Rot", pose.getRotation().getDegrees());
     }
+
+    // public void updateVisionPose(Pose2d visionRobotPose, double timestamp, String
+    // cameraName, boolean cameraEnabled) {
+    // if (cameraEnabled) {
+    // m_driveOdometry.addVisionMeasurement(visionRobotPose, timestamp);
+    // }
+    // }
 
     @Override
     public void periodic() {
@@ -384,56 +401,43 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     @Override
-public void simulationPeriodic() {
+    public void simulationPeriodic() {
 
-    // 1. Get motor voltages being applied
-    double leftVoltage =
-            m_leftSim.getAppliedOutput() * RoboRioSim.getVInVoltage();
+        // 1. Get motor voltages being applied
+        double leftVoltage = m_leftSim.getAppliedOutput() * RoboRioSim.getVInVoltage();
+        double rightVoltage = m_rightSim.getAppliedOutput() * RoboRioSim.getVInVoltage();
 
-    double rightVoltage =
-            m_rightSim.getAppliedOutput() * RoboRioSim.getVInVoltage();
+        // 2. Feed voltages into drivetrain physics model
+        m_driveTrainSim.setInputs(leftVoltage, rightVoltage);
 
-    // 2. Feed voltages into drivetrain physics model
-    m_driveTrainSim.setInputs(leftVoltage, rightVoltage);
+        // 3. Advance physics simulation
+        m_driveTrainSim.update(kSimDt);
 
-    // 3. Advance physics simulation
-    m_driveTrainSim.update(kSimDt);
+        // 4. Simulate battery voltage sag
+        double loadedVoltage = BatterySim.calculateDefaultBatteryLoadedVoltage(
+                m_driveTrainSim.getCurrentDrawAmps());
+        RoboRioSim.setVInVoltage(loadedVoltage);
 
-    // 4. Simulate battery voltage sag
-    double loadedVoltage =
-            BatterySim.calculateDefaultBatteryLoadedVoltage(
-                    m_driveTrainSim.getCurrentDrawAmps());
+        // 5. Update SparkMax simulations
+        m_leftSim.iterate(
+                m_driveTrainSim.getLeftVelocityMetersPerSecond(),
+                loadedVoltage,
+                kSimDt);
 
-    RoboRioSim.setVInVoltage(loadedVoltage);
+        m_rightSim.iterate(
+                m_driveTrainSim.getRightVelocityMetersPerSecond(),
+                loadedVoltage,
+                kSimDt);
 
-    // 5. Update SparkMax simulations
-    m_leftSim.iterate(
-            m_driveTrainSim.getLeftVelocityMetersPerSecond(),
-            loadedVoltage,
-            kSimDt);
+        // 6. Update simulated encoders
+        m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
+        m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
+        m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
+        m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
 
-    m_rightSim.iterate(
-            m_driveTrainSim.getRightVelocityMetersPerSecond(),
-            loadedVoltage,
-            kSimDt);
-
-    // 6. Update simulated encoders
-    m_leftEncoderSim.setPosition(
-            m_driveTrainSim.getLeftPositionMeters());
-
-    m_leftEncoderSim.setVelocity(
-            m_driveTrainSim.getLeftVelocityMetersPerSecond());
-
-    m_rightEncoderSim.setPosition(
-            m_driveTrainSim.getRightPositionMeters());
-
-    m_rightEncoderSim.setVelocity(
-            m_driveTrainSim.getRightVelocityMetersPerSecond());
-
-    // 7. Update gyro (match real-world sign!)
-    SimGyroAngleHandler.set(
-            -m_driveTrainSim.getHeading().getDegrees());
-}
+        // 7. Update gyro (match real-world sign!)
+        SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
+    }
 
     public Pose2d getPose() {
         return m_driveOdometry.getEstimatedPosition();

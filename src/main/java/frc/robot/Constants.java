@@ -62,14 +62,14 @@ public final class Constants {
         // these
         // values for your robot.
         // Feed Forward Constants
-        public static final double ksDriveVolts = 0.0;
+        public static final double ksDriveVolts = 0.0; ///0.1945
         public static final double kvDriveVoltSecondsPerMeter = 2.2623;
         public static final double kaDriveVoltSecondsSquaredPerMeter = 0.43785;
         public static final double kvDriveVoltSecondsPerMeterAngular = 1.2;
         public static final double kaDriveVoltSecondsSquaredPerMeterAngular = 0.2;
         // Max speed Constants
-        public static final double kMaxOutputDrive = 0.8;
-        public static final double kMinOutputDrive = -0.8;
+        public static final double kMaxOutputDrive = 0.9;
+        public static final double kMinOutputDrive = -0.9;
         // Feed Back / PID Constants
         public static final double kPDriveVel = 0.00088622;
         public static final double kIDriveVel = 0.0;
