@@ -11,9 +11,13 @@ import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.FuelSubsystem;
 import frc.robot.subsystems.CameraSubsystem;
 
-
-
 import frc.robot.commands.ArcadeDrive;
+import frc.robot.commands.ClimbDown;
+import frc.robot.commands.ClimbUp;
+import frc.robot.commands.Eject;
+import frc.robot.commands.Intake;
+import frc.robot.commands.LaunchSequence;
+
 import static frc.robot.Constants.OperatorConstants.*;
 
 public class RobotContainer {
@@ -21,14 +25,13 @@ public class RobotContainer {
     private final DriveSubsystem m_driveSubsystem = new DriveSubsystem();
     private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
-    private final FuelSubsystem m_intakeSubsystem = new FuelSubsystem();
-
+    private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
 
     private final CommandXboxController m_driverController = new CommandXboxController(DRIVER_CONTROLLER_PORT);
 
     // Init For Autonomous
     private final SendableChooser<Command> autoChooser;
-    
+
     /**
      * The container for the robot. Contains subsystems, OI devices, and commands.
      */
@@ -44,12 +47,10 @@ public class RobotContainer {
         SmartDashboard.putData("Auto Chooser", autoChooser);
         SmartDashboard.putNumber("heading", 0);
 
-
         m_driveSubsystem.setDefaultCommand(new ArcadeDrive(
-            m_driveSubsystem,
-            () -> -m_driverController.getLeftY(),
-            () -> -m_driverController.getRightX()
-        ));
+                m_driveSubsystem,
+                () -> -m_driverController.getLeftY(),
+                () -> -m_driverController.getRightX()));
     }
 
     public Command getAutonomousCommand() {
@@ -58,8 +59,27 @@ public class RobotContainer {
 
     private void configureBindings() {
         m_driverController.start()
-            .onTrue(Commands.runOnce(m_driveSubsystem::toggleDriveMode, m_driveSubsystem));
+                .onTrue(Commands.runOnce(m_driveSubsystem::toggleDriveMode, m_driveSubsystem));
         m_driverController.leftBumper()
-            .onTrue(Commands.runOnce(m_driveSubsystem::toggleHalfSpeed, m_driveSubsystem));
+                .onTrue(Commands.runOnce(m_driveSubsystem::toggleHalfSpeed, m_driveSubsystem));
+
+        // While the left trigger on operator controller is held, intake Fuel
+        m_driverController.leftTrigger().whileTrue(new Intake(m_fuelSubsystem));
+
+
+        // While the right bumper on the operator controller is held, spin up for 1
+        // second, then launch fuel. When the button is released, stop.
+        m_driverController.rightBumper().whileTrue(new LaunchSequence(m_fuelSubsystem));
+
+
+        // While the X button is held on the operator controller, eject fuel back out
+        // the intake
+        m_driverController.x().whileTrue(new Eject(m_fuelSubsystem));
+
+
+        // While the down arrow on the directional pad is held it will unclimb the robot
+        m_driverController.povDown().whileTrue(new ClimbDown(m_climberSubsystem));
+        // While the up arrow on the directional pad is held it will climb the robot
+        m_driverController.povUp().whileTrue(new ClimbUp(m_climberSubsystem));
     }
 }
