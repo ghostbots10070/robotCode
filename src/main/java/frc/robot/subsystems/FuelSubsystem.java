@@ -13,6 +13,9 @@ import com.revrobotics.spark.SparkMax;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.spark.SparkClosedLoopController;
+import com.revrobotics.spark.config.ClosedLoopConfig;
 
 import static frc.robot.Constants.FuelConstants.*;
 
@@ -21,6 +24,12 @@ public class FuelSubsystem extends SubsystemBase {
   private final SparkMax RightIntakeLauncher;
   private final SparkMax Indexer;
 
+  private RelativeEncoder leftIntakeLauncherEncoder;
+  private RelativeEncoder rightIntakeLauncherEncoder;
+
+  private SparkClosedLoopController leftIntakeLauncherPID;
+  private SparkClosedLoopController rightIntakeLauncherPID;
+
   /** Creates a new CANBallSubsystem. */
   public FuelSubsystem() {
     // create brushed motors for each of the motors on the launcher mechanism
@@ -28,10 +37,18 @@ public class FuelSubsystem extends SubsystemBase {
     RightIntakeLauncher = new SparkMax(RIGHT_INTAKE_LAUNCHER_MOTOR_ID, MotorType.kBrushless);
     Indexer = new SparkMax(INDEXER_MOTOR_ID, MotorType.kBrushed);
 
+
+    leftIntakeLauncherPID = LeftIntakeLauncher.getClosedLoopController();
+    rightIntakeLauncherPID = RightIntakeLauncher.getClosedLoopController();
+
+    leftIntakeLauncherEncoder = LeftIntakeLauncher.getEncoder();
+    rightIntakeLauncherEncoder = RightIntakeLauncher.getEncoder();
+
     // create the configuration for the feeder roller, set a current limit and apply
     // the config to the controller
     SparkMaxConfig feederConfig = new SparkMaxConfig();
     feederConfig.smartCurrentLimit(INDEXER_MOTOR_CURRENT_LIMIT);
+    feederConfig.inverted(false);
     Indexer.configure(feederConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     // create the configuration for the launcher roller, set a current limit, set
@@ -39,28 +56,49 @@ public class FuelSubsystem extends SubsystemBase {
     // launching, and apply the config to the controller
     SparkMaxConfig launcherConfig = new SparkMaxConfig();
 
+    ClosedLoopConfig pidConfig = new ClosedLoopConfig();
+
+    pidConfig.p(0.0002);
+    pidConfig.i(0);
+    pidConfig.d(0);
+    pidConfig.velocityFF(0.00018);
+
+    launcherConfig.apply(pidConfig);
+
     launcherConfig.smartCurrentLimit(LAUNCHER_MOTOR_CURRENT_LIMIT);
     launcherConfig.voltageCompensation(12);
     launcherConfig.idleMode(IdleMode.kCoast);
-    RightIntakeLauncher.configure(launcherConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
     launcherConfig.inverted(true);
+    RightIntakeLauncher.configure(launcherConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    launcherConfig.inverted(false);
     LeftIntakeLauncher.configure(launcherConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     // put default values for various fuel operations onto the dashboard
     // all commands using this subsystem pull values from the dashbaord to allow
     // you to tune the values easily, and then replace the values in Constants.java
     // with your new values. For more information, see the Software Guide.
-    SmartDashboard.putNumber("Intaking feeder roller value", INDEXER_INTAKING_PERCENT);
-    SmartDashboard.putNumber("Intaking intake roller value", INTAKE_INTAKING_PERCENT);
-    SmartDashboard.putNumber("Launching feeder roller value", INDEXER_LAUNCHING_PERCENT);
-    SmartDashboard.putNumber("Launching launcher roller value", LAUNCHING_LAUNCHER_PERCENT);
-    //SmartDashboard.putNumber("Spin-up feeder roller value", SPIN_UP_FEEDER_VOLTAGE);
+    SmartDashboard.putNumber("Intaking feeder roller value",
+    INDEXER_INTAKING_PERCENT);
+    SmartDashboard.putNumber("Intaking intake roller value",
+    INTAKE_INTAKING_PERCENT);
+    SmartDashboard.putNumber("Launching feeder roller value",
+    INDEXER_LAUNCHING_PERCENT);
+    SmartDashboard.putNumber("Launching launcher roller value",
+    LAUNCHING_LAUNCHER_PERCENT);
+    //SmartDashboard.putNumber("Spin-up feeder roller value",
+    //SPIN_UP_FEEDER_VOLTAGE);
   }
 
   // A method to set the voltage of the intake roller
   public void setIntakeLauncherRoller(double power) {
     LeftIntakeLauncher.set(power);
     RightIntakeLauncher.set(power); // positive for shooting
+  }
+
+  public void setShooterVoltage(double voltage) {
+    leftIntakeLauncherPID.setSetpoint(voltage, SparkMax.ControlType.kVoltage);
+    rightIntakeLauncherPID.setSetpoint(voltage, SparkMax.ControlType.kVoltage);
   }
 
   // A method to set the voltage of the intake roller

@@ -44,7 +44,7 @@ public final class Constants {
 
         public static final double WHEEL_DIAMETER = Units.inchesToMeters(6); // meters
         public static final double WHEEL_RADIUS = WHEEL_DIAMETER / 2;
-        public static final double kTrackwidthMeters = 0.5461; // TODO: Update
+        public static final double kTrackwidthMeters = Units.inchesToMeters(21.5); // 21.5 inches.
         // this is not used and is handled by the rev encoder.
         public static final double PULSES_PER_REV = 1;
         public static final double GEAR_RATIO = 8.46; // 8.46:1
@@ -62,7 +62,7 @@ public final class Constants {
         // these
         // values for your robot.
         // Feed Forward Constants
-        public static final double ksDriveVolts = 0.0; ///0.1945
+        public static final double ksDriveVolts = 0.015;
         public static final double kvDriveVoltSecondsPerMeter = 2.2623;
         public static final double kaDriveVoltSecondsSquaredPerMeter = 0.43785;
         public static final double kvDriveVoltSecondsPerMeterAngular = 1.2;
@@ -71,12 +71,12 @@ public final class Constants {
         public static final double kMaxOutputDrive = 0.9;
         public static final double kMinOutputDrive = -0.9;
         // Feed Back / PID Constants
-        public static final double kPDriveVel = 0.00088622;
+        public static final double kPDriveVel = 0.01;
         public static final double kIDriveVel = 0.0;
         public static final double kDDriveVel = 0.0;
         public static final double kIzDriveVel = 0.0; // error before integral takes effect
 
-        public static final double kPDrivePos = 8; // 4.6269
+        public static final double kPDrivePos = 3.2973; // 4.6269
         public static final double kIDrivePos = 0.0;
         public static final double kDDrivePos = 0.49649;
         public static final double kIzDrivePos = 0.0; // error before integral takes effect
@@ -84,7 +84,7 @@ public final class Constants {
         // left and right
         // wheel velocities for a differential drive.
 
-        public static final double kMaxSpeedMetersPerSecond = 3.0;
+        public static final double kMaxSpeedMetersPerSecond = 10.0;
         public static final double kMaxAngularSpeedRadiansPerSecond = 2.0 * Math.PI; // 2π rad/s
         public static final DifferentialDriveKinematics kDriveKinematics = new DifferentialDriveKinematics(
                 kTrackwidthMeters);
@@ -113,6 +113,9 @@ public final class Constants {
         public static final double LAUNCHING_LAUNCHER_PERCENT = .85;
         public static final double INTAKE_EJECT_PERCENT = -0.8;
 
+        public static final double NEO_MAX_VOLTAGE = 12.0;
+        //public static final double LAUNCHING_LAUNCHER_VOLTAGE = NEO_
+
         public static final double SPIN_UP_SECONDS = 0.75;
     }
 
@@ -136,7 +139,7 @@ public final class Constants {
 
         // This value is multiplied by the joystick value when rotating the robot to
         // help avoid turning too fast and beign difficult to control
-        public static final double DRIVE_SCALING = 0.7;
-        public static final double ROTATION_SCALING = 0.8;
+        public static final double DRIVE_SCALING = 0.9;
+        public static final double ROTATION_SCALING = 0.7;
     }
 }

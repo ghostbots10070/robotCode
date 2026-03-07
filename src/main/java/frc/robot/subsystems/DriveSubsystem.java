@@ -46,7 +46,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
 import static frc.robot.Constants.DriveConstants.*;
 
 public class DriveSubsystem extends SubsystemBase {
@@ -60,10 +62,12 @@ public class DriveSubsystem extends SubsystemBase {
     private boolean gyroZeroPending = true;
     private final Field2d m_field = new Field2d();
 
-    private boolean m_closedLoopMode = false; // false = Open Loop, true = Velocity PID
+    private boolean m_closedLoopMode = true; // false = Open Loop, true = Velocity PID
     private boolean m_halfSpeedMode = false;
+    private boolean m_directionInverted = false;
+
     // Heading Correction
-    private final PIDController m_headingPID = new PIDController(0.02, 0, 0); // Tune kP (0.01 - 0.05)
+    private final PIDController m_headingPID = new PIDController(0.2, 0, 0); // Tune kP (0.01 - 0.05)
     private double m_targetHeading = 0.0;
 
     // motors
@@ -73,8 +77,8 @@ public class DriveSubsystem extends SubsystemBase {
     private final SparkMax rightFollower = new SparkMax(RIGHT_FOLLOWER_ID, MotorType.kBrushless);
 
     // encoders
-    private final RelativeEncoder m_encoderleftLeader = leftLeader.getEncoder();
-    private final RelativeEncoder m_encoderrightLeader = rightLeader.getEncoder();
+    private final RelativeEncoder m_encoderLeftLeader = leftLeader.getEncoder();
+    private final RelativeEncoder m_encoderRightLeader = rightLeader.getEncoder();
 
     // motor pid controllers
     private final SparkClosedLoopController m_leftLeaderPIDController = leftLeader.getClosedLoopController();
@@ -109,6 +113,8 @@ public class DriveSubsystem extends SubsystemBase {
     private final Double kSimDt = 0.02; // 20 ms loop time
 
     public DriveSubsystem() {
+        SmartDashboard.putBoolean("Closed Loop Mode", m_closedLoopMode);
+
         // Creates a SysIdRoutine
         m_sysIdRoutine = new SysIdRoutine(
                 new SysIdRoutine.Config(),
@@ -158,8 +164,8 @@ public class DriveSubsystem extends SubsystemBase {
         m_driveOdometry = new DifferentialDrivePoseEstimator(
                 kDriveKinematics,
                 m_gyro.getRotation2d(),
-                m_encoderleftLeader.getPosition(),
-                m_encoderrightLeader.getPosition(),
+                m_encoderLeftLeader.getPosition(),
+                m_encoderRightLeader.getPosition(),
                 new Pose2d());
 
         m_leftGearbox = DCMotor.getNEO(2);
@@ -200,7 +206,7 @@ public class DriveSubsystem extends SubsystemBase {
                 this::resetPose,
                 // getSpeeds
                 () -> kDriveKinematics.toChassisSpeeds(new DifferentialDriveWheelSpeeds(
-                        m_encoderleftLeader.getVelocity(), m_encoderrightLeader.getVelocity())),
+                        m_encoderLeftLeader.getVelocity(), m_encoderRightLeader.getVelocity())),
                 // setSpeeds
                 (ChassisSpeeds speeds) -> setWheelVelocities(kDriveKinematics.toWheelSpeeds(speeds)),
                 new PPLTVController(0.02),
@@ -230,15 +236,15 @@ public class DriveSubsystem extends SubsystemBase {
         double leftVoltage = leftLeader.getAppliedOutput() * RobotController.getBatteryVoltage();
         double rightVoltage = rightLeader.getAppliedOutput() * RobotController.getBatteryVoltage();
 
-        log.motor("left")
+        log.motor("drive-left")
                 .voltage(Volts.of(leftVoltage))
-                .linearPosition(Meters.of(m_encoderleftLeader.getPosition()))
-                .linearVelocity(MetersPerSecond.of(m_encoderleftLeader.getVelocity()));
+                .linearPosition(Meters.of(m_encoderLeftLeader.getPosition()))
+                .linearVelocity(MetersPerSecond.of(m_encoderLeftLeader.getVelocity()));
 
-        log.motor("right")
+        log.motor("drive-right")
                 .voltage(Volts.of(rightVoltage))
-                .linearPosition(Meters.of(m_encoderrightLeader.getPosition()))
-                .linearVelocity(MetersPerSecond.of(m_encoderrightLeader.getVelocity()));
+                .linearPosition(Meters.of(m_encoderRightLeader.getPosition()))
+                .linearVelocity(MetersPerSecond.of(m_encoderRightLeader.getVelocity()));
     }
 
     public void resetPose(Pose2d pose) {
@@ -247,11 +253,11 @@ public class DriveSubsystem extends SubsystemBase {
         // TODO: figure out if we actually neec to do this or it just messes up the
         // whole thing
         m_driveTrainSim.setPose(pose);
-        m_leftEncoderSim.setVelocity(0);
-        m_rightEncoderSim.setVelocity(0);
+        // m_leftEncoderSim.setVelocity(0);
+        // m_rightEncoderSim.setVelocity(0);
         // Reset odometry AFTER sim pose
         m_driveOdometry.resetPosition(
-                m_gyro.getRotation2d(),
+                pose.getRotation(),
                 0.0,
                 0.0,
                 pose);
@@ -275,6 +281,33 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Slow Mode", m_halfSpeedMode);
     }
 
+    public void toggleDirection() {
+        m_directionInverted = !m_directionInverted;
+        // if (m_directionInverted){
+        // m_targetHeading = 180;
+        // } else{
+        // m_targetHeading = 0;
+        // }
+        SmartDashboard.putBoolean("Inverted Direction", m_directionInverted);
+    }
+
+    public void alignToAngle(double targetAngle) {
+        double currentHeading = m_gyro.getRotation2d().getDegrees();
+        double output = m_headingPID.calculate(currentHeading, targetAngle);
+
+        // Calculate a smooth FF instead of a hard step
+        double feedforward = m_driveFeedForward.calculate(output);
+
+        // Output as Volts rather than percentage to be more consistent with the battery
+        double voltsOut = MathUtil.clamp(feedforward, -6.0, 6.0);
+
+        m_diffDrive.arcadeDrive(0.0, voltsOut / 12.0);
+    }
+
+    public boolean isAligned() {
+        return m_headingPID.atSetpoint();
+    }
+
     /**
      * MAIN DRIVE METHOD
      * Handles: Half Speed, Closed/Open Loop Toggle, and Gyro Correction
@@ -285,22 +318,27 @@ public class DriveSubsystem extends SubsystemBase {
             rotSpeed *= 0.5;
         }
 
+        if (m_directionInverted) {
+            fwdSpeed *= -1;
+        }
+
         double finalRot = rotSpeed;
 
         // Only attempt stabilization if moving forward but not commanding a turn
-        if (Math.abs(rotSpeed) < 0.05 && Math.abs(fwdSpeed) > 0.05) {
-            if (Math.abs(m_gyro.getRate()) < 2.0) {
-                // Calculate correction (Positive output means we need to turn Left/CCW)
-                double correction = m_headingPID.calculate(m_gyro.getRotation2d().getDegrees(), m_targetHeading);
-                finalRot = MathUtil.clamp(correction, -0.3, 0.3);
-            } else {
-                m_targetHeading = m_gyro.getRotation2d().getDegrees();
-            }
-        } else {
-            m_targetHeading = m_gyro.getRotation2d().getDegrees();
-        }
+        // if (Math.abs(rotSpeed) < 0.05 && Math.abs(fwdSpeed) > 0.05) {
+        // if (Math.abs(m_gyro.getRate()) < 2.0) {
+        // // Calculate correction (Positive output means we need to turn Left/CCW)
+        // double correction =
+        // m_headingPID.calculate(m_gyro.getRotation2d().getDegrees(), m_targetHeading);
+        // finalRot = MathUtil.clamp(correction, -0.3, 0.3);
+        // } else {
+        // m_targetHeading = m_gyro.getRotation2d().getDegrees();
+        // }
+        // } else {
+        m_targetHeading = m_gyro.getRotation2d().getDegrees();
+        // }
 
-        SmartDashboard.putBoolean("Mode: Closed Loop", m_closedLoopMode);
+        SmartDashboard.putNumber("fwdSpeed", fwdSpeed);
 
         if (m_closedLoopMode) {
             // Closed Loop: Positive finalRot turns CCW (Left)
@@ -308,9 +346,6 @@ public class DriveSubsystem extends SubsystemBase {
             m_diffDrive.feed();
         } else {
             // Open Loop: arcadeDrive expects positive to be CW (Right).
-            // CRITICAL FIX: We MUST pass -finalRot so that positive rotSpeed turns CCW
-            // (Left)
-            // This unifies Open Loop, Closed Loop, and the Gyro PID!
             m_diffDrive.arcadeDrive(fwdSpeed, finalRot, false);
         }
     }
@@ -336,9 +371,54 @@ public class DriveSubsystem extends SubsystemBase {
         setWheelVelocities(wheelSpeeds);
     }
 
+    private void movePosition(double meters) {
+        // Set target position for both sides
+        m_leftLeaderPIDController.setSetpoint(
+                meters,
+                SparkBase.ControlType.kPosition,
+                kDrivetrainPositionPIDSlot);
+
+        m_rightLeaderPIDController.setSetpoint(
+                meters,
+                SparkBase.ControlType.kPosition,
+                kDrivetrainPositionPIDSlot);
+    }
+
+    public Command movePositionCommand(double meters) {
+        final double positionTolerance = 0.01; // meters tolerance for considering we're at the setpoint
+        return Commands.parallel(
+                Commands.run(
+                    () -> {
+                        movePosition(meters);
+                    }, this),
+
+                // Wait until the drivetrain left encoder has reached the setpoint within tolerance
+                Commands.waitUntil(() -> Math.abs(m_encoderLeftLeader.getPosition() - meters) < positionTolerance));
+    }
+
+//     public Command driveDistanceCommand(double distanceMeters, double speed) {
+//     return runOnce(
+//             () -> {
+//               // Reset encoders at the start of the command
+//               m_encoderLeftLeader.reset();
+//               m_encoderRightLeader.reset();
+//             })
+//         // Drive forward at specified speed
+//         .andThen(run(() -> m_diffDrive.arcadeDrive(speed, 0)))
+//         // End command when we've traveled the specified distance
+//         .until(
+//             () ->
+//                 Math.max(m_encoderLeftLeader.getDistance(), m_encoderRightLeader.getDistance())
+//                     >= distanceMeters)
+//         // Stop the drive when the command ends
+//         .finallyDo(interrupted -> m_drive.stopMotor());
+//   }
+
+  //  }
+
     private void resetEncoders() {
-        m_encoderleftLeader.setPosition(0);
-        m_encoderrightLeader.setPosition(0);
+        m_encoderLeftLeader.setPosition(0);
+        m_encoderRightLeader.setPosition(0);
     }
 
     private void setWheelVelocities(DifferentialDriveWheelSpeeds speeds) {
@@ -393,8 +473,8 @@ public class DriveSubsystem extends SubsystemBase {
             gyroZeroPending = false; // Flag false immediately to prevent re-entry
         }
 
-        m_driveOdometry.update(m_gyro.getRotation2d(), m_encoderleftLeader.getPosition(),
-                m_encoderrightLeader.getPosition());
+        m_driveOdometry.update(m_gyro.getRotation2d(), m_encoderLeftLeader.getPosition(),
+                m_encoderRightLeader.getPosition());
         m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
 
         postCords();
@@ -402,41 +482,59 @@ public class DriveSubsystem extends SubsystemBase {
 
     @Override
     public void simulationPeriodic() {
+        // SmartDashboard.putNumber("SimDebug/Left_AppliedOutput",
+        // m_leftSim.getAppliedOutput());
+        // SmartDashboard.putNumber("SimDebug/Right_AppliedOutput",
+        // m_rightSim.getAppliedOutput());
 
-        // 1. Get motor voltages being applied
-        double leftVoltage = m_leftSim.getAppliedOutput() * RoboRioSim.getVInVoltage();
-        double rightVoltage = m_rightSim.getAppliedOutput() * RoboRioSim.getVInVoltage();
+        // // 2. Check Simulated Mechanism Velocities
+        // SmartDashboard.putNumber("SimDebug/Left_Sim_Velocity_MS",
+        // m_driveTrainSim.getLeftVelocityMetersPerSecond());
+        // SmartDashboard.putNumber("SimDebug/Right_Sim_Velocity_MS",
+        // m_driveTrainSim.getRightVelocityMetersPerSecond());
 
-        // 2. Feed voltages into drivetrain physics model
-        m_driveTrainSim.setInputs(leftVoltage, rightVoltage);
+        // // 3. Check Internal Motor Currents
+        // // (If these peg to 80A instantly, your simulated motors think they are
+        // stalled)
+        // SmartDashboard.putNumber("SimDebug/Left_Motor_Current",
+        // leftLeader.getOutputCurrent());
+        // SmartDashboard.putNumber("SimDebug/Right_Motor_Current",
+        // rightLeader.getOutputCurrent());
 
-        // 3. Advance physics simulation
-        m_driveTrainSim.update(kSimDt);
+        // This method will be called once per scheduler run during simulation
+        // link motors to simulation
+        double batteryVoltage = RoboRioSim.getVInVoltage();
 
-        // 4. Simulate battery voltage sag
-        double loadedVoltage = BatterySim.calculateDefaultBatteryLoadedVoltage(
-                m_driveTrainSim.getCurrentDrawAmps());
-        RoboRioSim.setVInVoltage(loadedVoltage);
+        m_driveTrainSim.setInputs(
+                m_leftSim.getAppliedOutput() * batteryVoltage,
+                m_rightSim.getAppliedOutput() * batteryVoltage);
 
-        // 5. Update SparkMax simulations
+        // 1. Check Applied Outputs (Logical vs Physical Voltage)
+
+        // Advance the model by 20 ms. Note that if you are running this
+        // subsystem in a separate thread or have changed the nominal timestep
+        // of TimedRobot, this value needs to match it.
+        m_driveTrainSim.update(0.02);
+        // update spark maxes
         m_leftSim.iterate(
-                m_driveTrainSim.getLeftVelocityMetersPerSecond(),
-                loadedVoltage,
-                kSimDt);
-
+                m_driveTrainSim.getLeftVelocityMetersPerSecond(), batteryVoltage, 0.02);
         m_rightSim.iterate(
-                m_driveTrainSim.getRightVelocityMetersPerSecond(),
-                loadedVoltage,
-                kSimDt);
+                m_driveTrainSim.getRightVelocityMetersPerSecond(), batteryVoltage, 0.02);
 
-        // 6. Update simulated encoders
-        m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
-        m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
-        m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
-        m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
-
-        // 7. Update gyro (match real-world sign!)
+        // add load to battery
+        RoboRioSim.setVInVoltage(
+                BatterySim.calculateDefaultBatteryLoadedVoltage(m_driveTrainSim.getCurrentDrawAmps()));
+        // update sensors
         SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
+        // m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
+        // m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
+        // m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
+        // m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
+
+        m_driveOdometry.update(
+                m_driveTrainSim.getHeading(),
+                m_driveTrainSim.getLeftPositionMeters(),
+                m_driveTrainSim.getRightPositionMeters());
     }
 
     public Pose2d getPose() {

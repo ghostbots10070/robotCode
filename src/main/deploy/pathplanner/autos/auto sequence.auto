@@ -11,6 +11,12 @@
           }
         },
         {
+          "type": "wait",
+          "data": {
+            "waitTime": 5.0
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "go to climb"
@@ -23,9 +29,9 @@
           }
         },
         {
-          "type": "path",
+          "type": "wait",
           "data": {
-            "pathName": "collect auto"
+            "waitTime": 5.0
           }
         }
       ]
