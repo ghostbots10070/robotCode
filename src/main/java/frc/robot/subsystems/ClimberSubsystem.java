@@ -14,6 +14,10 @@ import static frc.robot.Constants.ClimbConstants.*;
 public class ClimberSubsystem extends SubsystemBase {
   private final SparkMax climberMotor;
 
+  // Add fields for testing
+  private double lastSetPower = 0;
+  private boolean stopCalled = false;
+
   /** Creates a new CANBallSubsystem. */
   public ClimberSubsystem() {
     // create brushed motors for each of the motors on the launcher mechanism
@@ -30,11 +34,22 @@ public class ClimberSubsystem extends SubsystemBase {
   // A method to set the percentage of the climber
   public void setClimber(double power) {
     climberMotor.set(power);
+    lastSetPower = power; // Track last set power for tests
   }
 
   // A method to stop the climber
   public void stop() {
     climberMotor.set(0);
+    stopCalled = true; // Track stop for tests
+  }
+
+  // Methods for tests to access state
+  public double getLastSetPower() {
+    return lastSetPower;
+  }
+
+  public boolean wasStopCalled() {
+    return stopCalled;
   }
 
   @Override

@@ -104,6 +104,9 @@ public class Robot extends TimedRobot {
          * visionThread.setDaemon(true);
          * visionThread.start();
          */
+
+           enableLiveWindowInTest(true);
+
         m_robotContainer = new RobotContainer();
     }
 

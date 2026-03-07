@@ -16,6 +16,8 @@ public class LaunchSequence extends SequentialCommandGroup {
   public LaunchSequence(FuelSubsystem fuelSubsystem) {
     // Add your commands in the addCommands() call, e.g.
     // addCommands(new FooCommand(), new BarCommand());
+
+    // TODO: https://docs.wpilib.org/en/stable/docs/software/commandbased/pid-subsystems-commands.html#pid-control-in-command-based
     addCommands(
         new SpinUp(fuelSubsystem).withTimeout(FuelConstants.SPIN_UP_SECONDS),
         new Launch(fuelSubsystem));

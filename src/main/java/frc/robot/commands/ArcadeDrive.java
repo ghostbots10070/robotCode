@@ -3,6 +3,7 @@
 package frc.robot.commands;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.DriveSubsystem;
 import java.util.function.DoubleSupplier;
@@ -18,6 +19,7 @@ public class ArcadeDrive extends Command {
         m_driveSubsystem = subsystem;
 
         m_speedSupplier = speed;
+        System.out.println(m_speedSupplier);
         m_rotationSupplier = rotation;
 
         // Use addRequirements() here to declare subsystem dependencies.
@@ -36,17 +38,22 @@ public class ArcadeDrive extends Command {
         double speed = m_speedSupplier.getAsDouble();
         double turn = m_rotationSupplier.getAsDouble();
 
+        SmartDashboard.putNumber("Speed Input", speed);
+
         // 2. Apply Deadband (Crucial for preventing drift)
-        speed = MathUtil.applyDeadband(speed, 0.1);
-        turn = MathUtil.applyDeadband(turn, 0.1);
+        speed = MathUtil.applyDeadband(speed, 0.05);
+        turn = MathUtil.applyDeadband(turn, 0.05);
 
         // 4. (Optional) Square Inputs for finer control at low speeds
         // pure math requires keeping the sign (+/-)
         speed = Math.copySign(speed * speed, speed);
         turn = Math.copySign(turn * turn, turn);
 
+        //System.out.println(turn);
+
         // 5. Send calculated values to subsystem
         m_driveSubsystem.drive(speed, turn);
+        // System.out.println("arcade drive " + "speed: " + speed + "turn: " + turn);
 
     }
 

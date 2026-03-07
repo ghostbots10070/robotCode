@@ -25,8 +25,8 @@ public class Launch extends Command {
   @Override
   public void initialize() {
     fuelSubsystem
-        .setIntakeLauncherRoller(
-            SmartDashboard.getNumber("Launching launcher roller value", LAUNCHING_LAUNCHER_PERCENT));
+        .setShooterVoltage(
+            SmartDashboard.getNumber("Launching launcher roller value", LAUNCHING_LAUNCHER_PERCENT) * NEO_MAX_VOLTAGE);
     fuelSubsystem.setFeederRoller(SmartDashboard.getNumber("Launching feeder roller value", INDEXER_LAUNCHING_PERCENT));
   }
 
