@@ -21,6 +21,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
 
+import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimDeviceDataJNI;
 import edu.wpi.first.math.MathUtil;
@@ -51,6 +52,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static frc.robot.Constants.DriveConstants.*;
 
+@Logged
 public class DriveSubsystem extends SubsystemBase {
     // SysID
     private final SysIdRoutine m_sysIdRoutine;
@@ -64,6 +66,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     private boolean m_closedLoopMode = true; // false = Open Loop, true = Velocity PID
     private boolean m_halfSpeedMode = false;
+    private double m_speedMultiplier = 1.0;
     private boolean m_directionInverted = false;
 
     // Heading Correction
@@ -281,6 +284,16 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Slow Mode", m_halfSpeedMode);
     }
 
+    public Command setMaxSpeed(double percent) {
+        return runOnce(
+                () -> {
+                    m_speedMultiplier = percent;
+                    System.out.println("Setting Max Speed to " + (percent * 100) + "%");
+                    SmartDashboard.putString("Speed Multiplier", (percent * 100) + "%");
+                }
+        );
+    }
+
     public void toggleDirection() {
         m_directionInverted = !m_directionInverted;
         // if (m_directionInverted){
@@ -317,6 +330,9 @@ public class DriveSubsystem extends SubsystemBase {
             fwdSpeed *= 0.5;
             rotSpeed *= 0.5;
         }
+
+        fwdSpeed *= m_speedMultiplier;
+        rotSpeed *= m_speedMultiplier;
 
         if (m_directionInverted) {
             fwdSpeed *= -1;
