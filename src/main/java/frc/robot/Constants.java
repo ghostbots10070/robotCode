@@ -101,8 +101,8 @@ public final class Constants {
         public static final int INDEXER_MOTOR_ID = 8;
 
         // Current limit for fuel mechanism motors.
-        public static final int INDEXER_MOTOR_CURRENT_LIMIT = 80;
-        public static final int LAUNCHER_MOTOR_CURRENT_LIMIT = 80;
+        public static final int INDEXER_MOTOR_CURRENT_LIMIT = 60;
+        public static final int LAUNCHER_MOTOR_CURRENT_LIMIT = 60;
 
         // All values likely need to be tuned based on your robot
         public static final double INDEXER_INTAKING_PERCENT = -.8;
@@ -124,7 +124,7 @@ public final class Constants {
         public static final int CLIMBER_MOTOR_ID = 7;
 
         // Current limit for climb motor
-        public static final int CLIMBER_MOTOR_CURRENT_LIMIT = 40;
+        public static final int CLIMBER_MOTOR_CURRENT_LIMIT = 80;
         // Percentage to power the motor both up and down
         public static final double CLIMBER_MOTOR_DOWN_PERCENT = -0.8;
         public static final double CLIMBER_MOTOR_UP_PERCENT = 0.8;
