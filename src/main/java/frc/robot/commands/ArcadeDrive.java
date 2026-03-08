@@ -34,7 +34,8 @@ public class ArcadeDrive extends Command {
     // Called every time the scheduler runs while the command is scheduled.
     @Override
     public void execute() {
-        // TODO: include a limit on the drivers speed for safety.
+        // TODO: https://docs.wpilib.org/en/stable/docs/software/advanced-controls/filters/slew-rate-limiter.html
+
         double speed = m_speedSupplier.getAsDouble();
         double turn = m_rotationSupplier.getAsDouble();
 

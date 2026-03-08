@@ -56,6 +56,8 @@ public class RobotContainer {
         SmartDashboard.putData("Auto Chooser", autoChooser);
         SmartDashboard.putNumber("heading", 0);
 
+        SmartDashboard.putString("Speed Multiplier", "100%");
+
         NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
 
         m_driveSubsystem.setDefaultCommand(new ArcadeDrive(
@@ -82,12 +84,19 @@ public class RobotContainer {
         m_driverController.start().onTrue(Commands.runOnce(m_driveSubsystem::toggleDriveMode, m_driveSubsystem));
         m_driverController.leftBumper().onTrue(Commands.runOnce(m_driveSubsystem::toggleHalfSpeed, m_driveSubsystem));
         m_driverController.back().onTrue(Commands.runOnce(m_driveSubsystem::toggleDirection, m_driveSubsystem));
-        m_driverController.a().whileTrue(new AlignStraight(m_driveSubsystem));
-        m_driverController.b().whileTrue(new AlignBackward(m_driveSubsystem));
+
+        m_driverController.a().onTrue(m_driveSubsystem.setMaxSpeed(1.0));
+        m_driverController.b().onTrue(m_driveSubsystem.setMaxSpeed(0.25));
+        m_driverController.x().onTrue(m_driveSubsystem.setMaxSpeed(0.75));
+        m_driverController.y().onTrue(m_driveSubsystem.setMaxSpeed(0.5));
+
+
+        //m_driverController.a().whileTrue(new AlignStraight(m_driveSubsystem));
+        //m_driverController.b().whileTrue(new AlignBackward(m_driveSubsystem));
 
         // sysid commands
-        m_driverController.y().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
-        m_driverController.x().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+        //m_driverController.y().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
+        //m_driverController.x().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
         m_operatorController.a().whileTrue(m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
         m_operatorController.b().whileTrue(m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
