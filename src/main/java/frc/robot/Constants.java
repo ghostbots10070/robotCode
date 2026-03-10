@@ -62,23 +62,26 @@ public final class Constants {
         // these
         // values for your robot.
         // Feed Forward Constants
-        public static final double ksDriveVolts = 0.015;
-        public static final double kvDriveVoltSecondsPerMeter = 2.2623;
-        public static final double kaDriveVoltSecondsSquaredPerMeter = 0.43785;
+        // TODO: run this on a carpet.
+        public static final double ksDriveVolts = 0.21547;
+        public static final double kvDriveVoltSecondsPerMeter = 2.19005;
+        public static final double kaDriveVoltSecondsSquaredPerMeter = 0.311935;
+
+        // angular is only used for the simulator
         public static final double kvDriveVoltSecondsPerMeterAngular = 1.2;
         public static final double kaDriveVoltSecondsSquaredPerMeterAngular = 0.2;
         // Max speed Constants
         public static final double kMaxOutputDrive = 0.9;
         public static final double kMinOutputDrive = -0.9;
         // Feed Back / PID Constants
-        public static final double kPDriveVel = 0.01;
+        public static final double kPDriveVel = 0.055461;
         public static final double kIDriveVel = 0.0;
         public static final double kDDriveVel = 0.0;
         public static final double kIzDriveVel = 0.0; // error before integral takes effect
 
-        public static final double kPDrivePos = 3.2973; // 4.6269
+        public static final double kPDrivePos = 3.71305; // 4.6269
         public static final double kIDrivePos = 0.0;
-        public static final double kDDrivePos = 0.49649;
+        public static final double kDDrivePos = 375.77; // TODO: seems really high, but this is what sysid says
         public static final double kIzDrivePos = 0.0; // error before integral takes effect
         // Helper class that converts a chassis velocity (dx and dtheta components) to
         // left and right
