@@ -13,8 +13,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.FuelSubsystem;
-// import frc.robot.subsystems.CameraSubsystem;
+import frc.robot.subsystems.CameraSubsystem;
 import frc.robot.commands.AlignStraight;
+import frc.robot.commands.AlignToAngle;
 import frc.robot.commands.AlignBackward;
 import frc.robot.commands.ArcadeDrive;
 import frc.robot.commands.AutoRoutines;
@@ -29,7 +30,7 @@ import static frc.robot.Constants.OperatorConstants.*;
 public class RobotContainer {
 
     private final DriveSubsystem m_driveSubsystem = new DriveSubsystem();
-    // private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
+    private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
     private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
 
@@ -54,7 +55,8 @@ public class RobotContainer {
 
 
         SmartDashboard.putData("Auto Chooser", autoChooser);
-        SmartDashboard.putNumber("heading", 0);
+        SmartDashboard.putNumber("Target Angle", 0);
+        // SmartDashboard.putNumber("heading", 0);
 
         SmartDashboard.putString("Speed Multiplier", "100%");
 
@@ -91,15 +93,15 @@ public class RobotContainer {
         // m_driverController.y().onTrue(m_driveSubsystem.setMaxSpeed(0.5));
 
 
-        //m_driverController.a().whileTrue(new AlignStraight(m_driveSubsystem));
+        m_driverController.a().whileTrue(new AlignToAngle(m_driveSubsystem));
         //m_driverController.b().whileTrue(new AlignBackward(m_driveSubsystem));
 
         // sysid commands
-        m_driverController.y().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
-        m_driverController.x().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+        // m_driverController.y().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
+        // m_driverController.x().whileTrue(m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
-        m_driverController.a().whileTrue(m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-        m_driverController.b().whileTrue(m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+        // m_driverController.a().whileTrue(m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+        // m_driverController.b().whileTrue(m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
 
         // Operator Controls
         m_operatorController.leftTrigger().whileTrue(new Intake(m_fuelSubsystem)); // gets ready to intake stuff

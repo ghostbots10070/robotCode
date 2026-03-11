@@ -50,10 +50,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+
 import static frc.robot.Constants.DriveConstants.*;
 
 @Logged
-public class DriveSubsystem extends SubsystemBase {
+public class DriveSubsystem extends SubsystemBase {    
     // SysID
     private final SysIdRoutine m_sysIdRoutine;
 
@@ -70,7 +73,7 @@ public class DriveSubsystem extends SubsystemBase {
     private boolean m_directionInverted = false;
 
     // Heading Correction
-    private final PIDController m_headingPID = new PIDController(0.2, 0, 0); // Tune kP (0.01 - 0.05)
+    private final PIDController m_headingPID = new PIDController(0.02, 0, 0.001); // Tune kP (0.01 - 0.05)
     private double m_targetHeading = 0.0;
 
     // motors
@@ -117,6 +120,8 @@ public class DriveSubsystem extends SubsystemBase {
 
     public DriveSubsystem() {
         SmartDashboard.putBoolean("Closed Loop Mode", m_closedLoopMode);
+
+
 
         // Creates a SysIdRoutine
         m_sysIdRoutine = new SysIdRoutine(
@@ -305,16 +310,14 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     public void alignToAngle(double targetAngle) {
+
         double currentHeading = m_gyro.getRotation2d().getDegrees();
+
         double output = m_headingPID.calculate(currentHeading, targetAngle);
 
-        // Calculate a smooth FF instead of a hard step
-        double feedforward = m_driveFeedForward.calculate(output);
+        output = MathUtil.clamp(output, -0.6, 0.6);
 
-        // Output as Volts rather than percentage to be more consistent with the battery
-        double voltsOut = MathUtil.clamp(feedforward, -6.0, 6.0);
-
-        m_diffDrive.arcadeDrive(0.0, voltsOut / 12.0);
+        m_diffDrive.arcadeDrive(0.0, output);
     }
 
     public boolean isAligned() {
@@ -564,4 +567,5 @@ public class DriveSubsystem extends SubsystemBase {
     public void resetGyro() {
         m_gyro.reset();
     }
+
 }
