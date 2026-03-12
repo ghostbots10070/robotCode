@@ -21,6 +21,9 @@ import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.util.PixelFormat;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.simulation.DriverStationSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -38,6 +41,8 @@ public class Robot extends TimedRobot {
      * for any initialization code.
      */
     private Command m_autonomousCommand;
+    private long m_simStartTime;
+    private boolean m_simMatchRunning = false;
 
     private RobotContainer m_robotContainer;
 
@@ -56,6 +61,11 @@ public class Robot extends TimedRobot {
         if (m_autonomousCommand != null) {
             m_autonomousCommand.schedule();
         }
+        
+        if (SmartDashboard.getBoolean("Simulate Match Cycle", false)) {
+            m_simStartTime = System.currentTimeMillis();
+            m_simMatchRunning = true;
+        }
     }
 
     @Override
@@ -69,6 +79,7 @@ public class Robot extends TimedRobot {
         // This must be called from the robot's periodic block in order for anything in
         // the Command-based framework to work.
         CommandScheduler.getInstance().run();
+        MatchStatusPublisher.publish();
         // System.out.println("called scheduler");
 
         // Return to normal thread priority
@@ -107,4 +118,35 @@ public class Robot extends TimedRobot {
     public void testPeriodic() {
     }
 
+    @Override
+    public void simulationInit() {
+        // Mock being connected to a field / FMS
+        DriverStationSim.setFmsAttached(true);
+        DriverStationSim.setAllianceStationId(edu.wpi.first.hal.AllianceStationID.Blue1);
+        SmartDashboard.setDefaultBoolean("Simulate Match Cycle", false);
+        DriverStationSim.notifyNewData();
+    }
+
+    @Override
+    public void simulationPeriodic() {
+        if (m_simMatchRunning) {
+            double elapsedSeconds = (System.currentTimeMillis() - m_simStartTime) / 1000.0;
+            double matchTimeRemaining = 150.0 - elapsedSeconds;
+
+            if (matchTimeRemaining <= 135.0 && DriverStationSim.getAutonomous()) {
+                // Transition to Teleop
+                DriverStationSim.setAutonomous(false);
+            }
+
+            if (matchTimeRemaining < 0) {
+                DriverStationSim.setEnabled(false);
+                matchTimeRemaining = 0;
+                m_simMatchRunning = false;
+            }
+
+            DriverStationSim.setMatchTime(matchTimeRemaining);
+            DriverStationSim.notifyNewData(); // Make sure the station pushes the simulated updates
+        }
+        MatchStatusPublisher.publish();
+    }
 }
