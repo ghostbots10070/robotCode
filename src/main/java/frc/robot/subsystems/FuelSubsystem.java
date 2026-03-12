@@ -19,6 +19,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.config.ClosedLoopConfig;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 
 import static frc.robot.Constants.FuelConstants.*;
 
@@ -148,5 +150,24 @@ public class FuelSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Sim/Fuel/LeftRPM", leftRPM);
         SmartDashboard.putNumber("Sim/Fuel/RightRPM", rightRPM);
         SmartDashboard.putNumber("Sim/Fuel/IndexerPercent", indexerPercent);
+    }
+
+    private boolean launcherAtSpeed(double targetRPM, double toleranceRPM) {
+        double left = leftIntakeLauncherEncoder.getVelocity();
+        double right = rightIntakeLauncherEncoder.getVelocity();
+        return Math.abs(left - targetRPM) <= toleranceRPM && Math.abs(right - targetRPM) <= toleranceRPM;
+    }
+
+    // TODO: figure out the right rpm
+    public Command shootAtSpeedCommand(double targetRPM, double toleranceRPM) {
+        return Commands.sequence(
+                    Commands.runOnce(() -> {
+                        leftIntakeLauncherPID.setSetpoint(targetRPM, SparkMax.ControlType.kVelocity);
+                        rightIntakeLauncherPID.setSetpoint(targetRPM, SparkMax.ControlType.kVelocity);
+                    }, this),
+                    Commands.waitUntil(() -> launcherAtSpeed(targetRPM, toleranceRPM)),
+                    Commands.run(() -> setFeederRoller(INDEXER_LAUNCHING_PERCENT), this))
+                .finallyDo(interrupted -> stop())
+                .withName("ShootAtRPM");
     }
 }

@@ -7,20 +7,14 @@ import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.FuelSubsystem;
 import frc.robot.subsystems.CameraSubsystem;
-import frc.robot.commands.AlignStraight;
-import frc.robot.commands.AlignToAngle;
-import frc.robot.commands.AlignBackward;
 import frc.robot.commands.ArcadeDrive;
 import frc.robot.commands.AutoRoutines;
-import frc.robot.commands.ClimbDown;
-import frc.robot.commands.ClimbUp;
 import frc.robot.commands.Eject;
 import frc.robot.commands.Intake;
 import frc.robot.commands.LaunchSequence;
@@ -72,7 +66,12 @@ public class RobotContainer {
 
         m_climberSubsystem.setDefaultCommand(m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
 
-        SmartDashboard.putData("move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .5));
+        SmartDashboard.putData("Commands/move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .5));
+        SmartDashboard.putData("Commands/Shoot (dashboard)",  m_fuelSubsystem.shootAtSpeedCommand(3000, 100)); // TODO: figure out the right rpm and tolerance
+        SmartDashboard.putData("Commands/Intake (dashboard)", new Intake(m_fuelSubsystem));
+        SmartDashboard.putData("Commands/Eject (dashboard)", new Eject(m_fuelSubsystem));
+        SmartDashboard.putData("Commands/Climb Up (dashboard)", m_climberSubsystem.climbUpCommand());
+        SmartDashboard.putData("Commands/Climb Down (dashboard)", m_climberSubsystem.climbDownCommand());
     }
 
     public Command getAutonomousCommand() {
@@ -93,8 +92,6 @@ public class RobotContainer {
         // m_driverController.x().onTrue(m_driveSubsystem.setMaxSpeed(0.75));
         // m_driverController.y().onTrue(m_driveSubsystem.setMaxSpeed(0.5));
 
-
-        m_driverController.a().whileTrue(new AlignToAngle(m_driveSubsystem));
         //m_driverController.b().whileTrue(new AlignBackward(m_driveSubsystem));
 
         // sysid commands
@@ -108,7 +105,7 @@ public class RobotContainer {
         m_operatorController.leftTrigger().whileTrue(new Intake(m_fuelSubsystem)); // gets ready to intake stuff
         m_operatorController.rightBumper().whileTrue(new LaunchSequence(m_fuelSubsystem)); // launch balls
         m_operatorController.x().whileTrue(new Eject(m_fuelSubsystem)); // eject balls out of the intake
-        m_operatorController.povDown().whileTrue(new ClimbDown(m_climberSubsystem));
-        m_operatorController.povUp().whileTrue(new ClimbUp(m_climberSubsystem));
+        m_operatorController.povUp().whileTrue(m_climberSubsystem.climbUpCommand()); // climb up
+        m_operatorController.povDown().whileTrue(m_climberSubsystem.climbDownCommand()); // climb down
     }
 }
