@@ -201,7 +201,8 @@ public class DriveSubsystem extends SubsystemBase {
                 // heading: 0.001 rad
                 // l and r velocity: 0.1 m/s
                 // l and r position: 0.005 m
-                VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
+                null);
+                //VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
 
         // setup simulated encoders
         m_leftEncoderSim = new SparkRelativeEncoderSim(leftLeader);
@@ -415,25 +416,19 @@ public class DriveSubsystem extends SubsystemBase {
                 Commands.waitUntil(() -> Math.abs(m_encoderLeftLeader.getPosition() - meters) < positionTolerance));
     }
 
-//     public Command driveDistanceCommand(double distanceMeters, double speed) {
-//     return runOnce(
-//             () -> {
-//               // Reset encoders at the start of the command
-//               m_encoderLeftLeader.reset();
-//               m_encoderRightLeader.reset();
-//             })
-//         // Drive forward at specified speed
-//         .andThen(run(() -> m_diffDrive.arcadeDrive(speed, 0)))
-//         // End command when we've traveled the specified distance
-//         .until(
-//             () ->
-//                 Math.max(m_encoderLeftLeader.getDistance(), m_encoderRightLeader.getDistance())
-//                     >= distanceMeters)
-//         // Stop the drive when the command ends
-//         .finallyDo(interrupted -> m_drive.stopMotor());
-//   }
-
-  //  }
+    public Command driveDistanceCommand(double distanceMeters, double speed) {
+        final double commandedSpeed = Math.copySign(Math.abs(speed), distanceMeters);
+        final double[] start = new double[2];
+        return runOnce(() -> {
+                    start[0] = m_encoderLeftLeader.getPosition();
+                    start[1] = m_encoderRightLeader.getPosition();
+                })
+                .andThen(run(() -> m_diffDrive.arcadeDrive(commandedSpeed, 0)))
+                .until(() -> Math.max(Math.abs(m_encoderLeftLeader.getPosition() - start[0]),
+                                      Math.abs(m_encoderRightLeader.getPosition() - start[1]))
+                            >= Math.abs(distanceMeters))
+                .finallyDo(interrupted -> m_diffDrive.stopMotor());
+    }
 
     private void resetEncoders() {
         m_encoderLeftLeader.setPosition(0);
@@ -533,12 +528,12 @@ public class DriveSubsystem extends SubsystemBase {
         // Advance the model by 20 ms. Note that if you are running this
         // subsystem in a separate thread or have changed the nominal timestep
         // of TimedRobot, this value needs to match it.
-        m_driveTrainSim.update(0.02);
+        m_driveTrainSim.update(kSimDt);
         // update spark maxes
         m_leftSim.iterate(
-                m_driveTrainSim.getLeftVelocityMetersPerSecond(), batteryVoltage, 0.02);
+                m_driveTrainSim.getLeftVelocityMetersPerSecond(), batteryVoltage, kSimDt);
         m_rightSim.iterate(
-                m_driveTrainSim.getRightVelocityMetersPerSecond(), batteryVoltage, 0.02);
+                m_driveTrainSim.getRightVelocityMetersPerSecond(), batteryVoltage, kSimDt);
 
         // add load to battery
         RoboRioSim.setVInVoltage(
@@ -550,10 +545,10 @@ public class DriveSubsystem extends SubsystemBase {
         // m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
         // m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
 
-        m_driveOdometry.update(
+        /*m_driveOdometry.update(
                 m_driveTrainSim.getHeading(),
                 m_driveTrainSim.getLeftPositionMeters(),
-                m_driveTrainSim.getRightPositionMeters());
+                m_driveTrainSim.getRightPositionMeters());*/
     }
 
     public Pose2d getPose() {
