@@ -71,7 +71,8 @@ public class RobotContainer {
         m_fuelSubsystem.setDefaultCommand(m_fuelSubsystem.run(() -> m_fuelSubsystem.stop()));
 
         m_climberSubsystem.setDefaultCommand(m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
-                
+
+        SmartDashboard.putData("move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .5));
     }
 
     public Command getAutonomousCommand() {
