@@ -73,6 +73,8 @@ public class DriveSubsystem extends SubsystemBase {
     private final PIDController m_headingPID = new PIDController(0.02, 0, 0.001); // Tune kP (0.01 - 0.05)
     private double m_targetHeading = 0.0;
 
+    
+
     // motors
     private final SparkMax leftLeader = new SparkMax(LEFT_LEADER_ID, MotorType.kBrushless);
     private final SparkMax leftFollower = new SparkMax(LEFT_FOLLOWER_ID, MotorType.kBrushless);
@@ -270,7 +272,12 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     public void arcadeDrive(double fwd, double rot) {
+        
+        
+        
         m_diffDrive.arcadeDrive(fwd, rot);
+    
+    
     }
 
     /**
@@ -559,5 +566,6 @@ public class DriveSubsystem extends SubsystemBase {
     public void resetGyro() {
         m_gyro.reset();
     }
+
 
 }

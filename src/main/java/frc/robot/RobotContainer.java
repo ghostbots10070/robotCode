@@ -18,7 +18,7 @@ import frc.robot.commands.AutoRoutines;
 import frc.robot.commands.Eject;
 import frc.robot.commands.Intake;
 import frc.robot.commands.LaunchSequence;
-
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import static frc.robot.Constants.OperatorConstants.*;
 
 public class RobotContainer {
@@ -27,6 +27,7 @@ public class RobotContainer {
     private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
     private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
+   
 
     private final CommandXboxController m_driverController = new CommandXboxController(DRIVER_CONTROLLER_PORT);
     private final CommandXboxController m_operatorController = new CommandXboxController(OPERATOR_CONTROLLER_PORT);
@@ -55,12 +56,14 @@ public class RobotContainer {
         SmartDashboard.putString("Speed Multiplier", "100%");
 
         NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
-
+         SlewRateLimiter filter = new SlewRateLimiter(0.5);
         m_driveSubsystem.setDefaultCommand(new ArcadeDrive(
                 m_driveSubsystem,
-                () -> -m_driverController.getLeftY(),
-                () -> -m_driverController.getRightX()
-        ));
+                () -> filter.calculate(-m_driverController.getLeftY()),
+                () -> filter.calculate(-m_driverController.getRightX())
+                 
+        ));  
+
 
         m_fuelSubsystem.setDefaultCommand(m_fuelSubsystem.run(() -> m_fuelSubsystem.stop()));
 
