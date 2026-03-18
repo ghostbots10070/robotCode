@@ -57,10 +57,11 @@ public class RobotContainer {
 
         NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
          SlewRateLimiter filter = new SlewRateLimiter(0.5);
+        SlewRateLimiter filter3 = new SlewRateLimiter(0.5);
         m_driveSubsystem.setDefaultCommand(new ArcadeDrive(
                 m_driveSubsystem,
                 () -> filter.calculate(-m_driverController.getLeftY()),
-                () -> filter.calculate(-m_driverController.getRightX())
+                () -> filter3.calculate(-m_driverController.getRightX())
                  
         ));  
 
