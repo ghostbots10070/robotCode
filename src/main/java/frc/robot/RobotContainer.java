@@ -24,7 +24,7 @@ import static frc.robot.Constants.OperatorConstants.*;
 public class RobotContainer {
 
     private final DriveSubsystem m_driveSubsystem = new DriveSubsystem();
-    private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
+    //private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
     private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
    
@@ -91,10 +91,10 @@ public class RobotContainer {
         m_driverController.leftBumper().onTrue(Commands.runOnce(m_driveSubsystem::toggleHalfSpeed, m_driveSubsystem));
         m_driverController.back().onTrue(Commands.runOnce(m_driveSubsystem::toggleDirection, m_driveSubsystem));
 
-        // m_driverController.a().onTrue(m_driveSubsystem.setMaxSpeed(1.0));
-        // m_driverController.b().onTrue(m_driveSubsystem.setMaxSpeed(0.25));
-        // m_driverController.x().onTrue(m_driveSubsystem.setMaxSpeed(0.75));
-        // m_driverController.y().onTrue(m_driveSubsystem.setMaxSpeed(0.5));
+        m_driverController.a().onTrue(m_driveSubsystem.setMaxSpeed(1.0));
+        m_driverController.b().onTrue(m_driveSubsystem.setMaxSpeed(0.25));
+        m_driverController.x().onTrue(m_driveSubsystem.setMaxSpeed(0.75));
+        m_driverController.y().onTrue(m_driveSubsystem.setMaxSpeed(0.5));
 
         //m_driverController.b().whileTrue(new AlignBackward(m_driveSubsystem));
 
