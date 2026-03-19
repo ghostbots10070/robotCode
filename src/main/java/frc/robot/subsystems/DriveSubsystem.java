@@ -73,8 +73,6 @@ public class DriveSubsystem extends SubsystemBase {
     private final PIDController m_headingPID = new PIDController(0.02, 0, 0.001); // Tune kP (0.01 - 0.05)
     private double m_targetHeading = 0.0;
 
-    
-
     // motors
     private final SparkMax leftLeader = new SparkMax(LEFT_LEADER_ID, MotorType.kBrushless);
     private final SparkMax leftFollower = new SparkMax(LEFT_FOLLOWER_ID, MotorType.kBrushless);
@@ -129,6 +127,7 @@ public class DriveSubsystem extends SubsystemBase {
 
         // init gyro
         m_gyro = new AHRS(NavXComType.kMXP_SPI);
+        SmartDashboard.putData("Gyro", m_gyro);
 
         // Configure Heading PID
         m_headingPID.enableContinuousInput(-180, 180);
@@ -272,12 +271,7 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     public void arcadeDrive(double fwd, double rot) {
-        
-        
-        
         m_diffDrive.arcadeDrive(fwd, rot);
-    
-    
     }
 
     /**
@@ -317,6 +311,7 @@ public class DriveSubsystem extends SubsystemBase {
     public void alignToAngle(double targetAngle) {
 
         double currentHeading = m_gyro.getRotation2d().getDegrees();
+
 
         double output = m_headingPID.calculate(currentHeading, targetAngle);
 
@@ -360,6 +355,9 @@ public class DriveSubsystem extends SubsystemBase {
         // }
         // } else {
         m_targetHeading = m_gyro.getRotation2d().getDegrees();
+
+                SmartDashboard.putNumber("Current Heading", m_targetHeading);
+
         // }
 
         SmartDashboard.putNumber("fwdSpeed", fwdSpeed);
@@ -485,11 +483,15 @@ public class DriveSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
+        SmartDashboard.putData("Gyro", m_gyro);
+
+
         // Fix for infinite reset loop
         if (gyroZeroPending && !m_gyro.isCalibrating()) {
             m_gyro.reset();
             gyroZeroPending = false; // Flag false immediately to prevent re-entry
         }
+        
 
         m_driveOdometry.update(m_gyro.getRotation2d(), m_encoderLeftLeader.getPosition(),
                 m_encoderRightLeader.getPosition());
@@ -544,10 +546,10 @@ public class DriveSubsystem extends SubsystemBase {
                 BatterySim.calculateDefaultBatteryLoadedVoltage(m_driveTrainSim.getCurrentDrawAmps()));
         // update sensors
         SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
-        // m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
-        // m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
-        // m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
-        // m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
+        m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
+        m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
+        m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
+        m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
 
         /*m_driveOdometry.update(
                 m_driveTrainSim.getHeading(),
@@ -566,6 +568,5 @@ public class DriveSubsystem extends SubsystemBase {
     public void resetGyro() {
         m_gyro.reset();
     }
-
 
 }
