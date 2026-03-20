@@ -29,6 +29,8 @@ public class ClimberSubsystem extends SubsystemBase {
     private double maxAngle = 170; // when the climber is inside the robot
     private double minAngle = 2; // when the climber is fully lowered
 
+    // TODO: use preferences
+    // https://docs.wpilib.org/en/stable/docs/software/basic-programming/robot-preferences.html#reading-preferences
     private double resetAngle = 99; // fully upwards
     private double prepAngle = 20; // the angle we want to be at to prep for climbing
     private double l1ClimbAngle = 99; // the angle we want to be at to be in position for an L1 climb
