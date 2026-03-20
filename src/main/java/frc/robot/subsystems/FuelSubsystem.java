@@ -103,8 +103,8 @@ public class FuelSubsystem extends SubsystemBase {
                 INDEXER_LAUNCHING_PERCENT);
         SmartDashboard.putNumber("Launching launcher roller value",
                 LAUNCHING_LAUNCHER_PERCENT);
-        // SmartDashboard.putNumber("Spin-up feeder roller value",
-        // SPIN_UP_FEEDER_VOLTAGE);
+        SmartDashboard.putNumber("Launching spin-up feeder value",
+                INDEXER_SPIN_UP_PRE_LAUNCH_PERCENT);
     }
 
     // A method to set the voltage of the intake roller

@@ -271,7 +271,7 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     public void arcadeDrive(double fwd, double rot) {
-        m_diffDrive.arcadeDrive(fwd, rot);
+        m_diffDrive.arcadeDrive(fwd, rot, false);
     }
 
     /**
@@ -292,7 +292,7 @@ public class DriveSubsystem extends SubsystemBase {
         return runOnce(
                 () -> {
                     m_speedMultiplier = percent;
-                    System.out.println("Setting Max Speed to " + (percent * 100) + "%");
+                    //System.out.println("Setting Max Speed to " + (percent * 100) + "%");
                     SmartDashboard.putString("Speed Multiplier", (percent * 100) + "%");
                 }
         );
@@ -425,7 +425,7 @@ public class DriveSubsystem extends SubsystemBase {
                     start[0] = m_encoderLeftLeader.getPosition();
                     start[1] = m_encoderRightLeader.getPosition();
                 })
-                .andThen(run(() -> m_diffDrive.arcadeDrive(commandedSpeed, 0)))
+                .andThen(run(() -> m_diffDrive.arcadeDrive(commandedSpeed, 0, false)))
                 .until(() -> Math.max(Math.abs(m_encoderLeftLeader.getPosition() - start[0]),
                                       Math.abs(m_encoderRightLeader.getPosition() - start[1]))
                             >= Math.abs(distanceMeters))

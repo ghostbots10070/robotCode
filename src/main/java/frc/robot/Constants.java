@@ -119,7 +119,7 @@ public final class Constants {
         public static final double NEO_MAX_VOLTAGE = 12.0;
         //public static final double LAUNCHING_LAUNCHER_VOLTAGE = NEO_
 
-        public static final double SPIN_UP_SECONDS = 0.75;
+        public static final double SPIN_UP_SECONDS = 1;
     }
 
     public static final class ClimbConstants {
