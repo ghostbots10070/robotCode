@@ -29,6 +29,10 @@ public class ClimberSubsystem extends SubsystemBase {
     private double maxAngle = 170; // when the climber is inside the robot
     private double minAngle = 2; // when the climber is fully lowered
 
+    private double resetAngle = 99; // fully upwards
+    private double prepAngle = 20; // the angle we want to be at to prep for climbing
+    private double l1ClimbAngle = 99; // the angle we want to be at to be in position for an L1 climb
+
     /** Creates a new CANBallSubsystem. */
     public ClimberSubsystem() {
         // create brushed motors for each of the motors on the launcher mechanism
@@ -45,18 +49,24 @@ public class ClimberSubsystem extends SubsystemBase {
         rawClimberPotentiometer = new AnalogInput(CLIMBER_POTENTIOMETER_CHANNEL);
         climberPotentiometer = new AnalogPotentiometer(rawClimberPotentiometer, 180);
         SmartDashboard.putData("Climber/Raw", climberPotentiometer);
-
-        // should be at zero degrees in the normal starting position
         SmartDashboard.putNumber("Climber/Angle", climberPotentiometer.get());
+
+        SmartDashboard.putNumber("Climber/Prep Angle", prepAngle);
+        SmartDashboard.putNumber("Climber/Reset Angle", resetAngle);
+        SmartDashboard.putNumber("Climber/L1 Climb Angle", l1ClimbAngle);
+
+        SmartDashboard.putBoolean("Climber/Safety Limiter", true);
     }
 
     // A method to set the percentage of the climber
     public void setClimber(double power) {
-        // if (power > 0 && climberPotentiometer.get() >= maxAngle) {
-        //     power = 0; // Prevent moving up if at or above max angle
-        // } else if (power < 0 && climberPotentiometer.get() <= minAngle) {
-        //     power = 0; // Prevent moving down if at or below min angle
-        // }
+        if (SmartDashboard.getBoolean("Climber/Safety Limiter", true)) {
+            if (power > 0 && climberPotentiometer.get() >= maxAngle) {
+                power = 0; // Prevent moving up if at or above max angle
+            } else if (power < 0 && climberPotentiometer.get() <= minAngle) {
+                power = 0; // Prevent moving down if at or below min angle
+            }
+        }
 
         climberMotor.set(power);
         lastSetPower = power; // Track last set power for tests
@@ -129,11 +139,15 @@ public class ClimberSubsystem extends SubsystemBase {
     }
 
     public Command prepClimber() {
-        return setToAngleCommand(20);
+        return setToAngleCommand(prepAngle);
     }
 
     public Command autoL1Climb() {
-        return setToAngleCommand(99);
+        return setToAngleCommand(l1ClimbAngle);
+    }
+
+    public Command resetClimber() {
+        return setToAngleCommand(resetAngle);
     }
 
     @Override

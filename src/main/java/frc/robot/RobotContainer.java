@@ -79,10 +79,10 @@ public class RobotContainer {
         SmartDashboard.putData("Commands/Climb Up (dashboard)", m_climberSubsystem.climbUpCommand());
         SmartDashboard.putData("Commands/Climb Down (dashboard)", m_climberSubsystem.climbDownCommand());
 
-        SmartDashboard.putData("Commands/Prep Climber (dashboard)", m_climberSubsystem.prepClimber());
-        SmartDashboard.putData("Commands/Auto L1 Climb (dashboard)", m_climberSubsystem.autoL1Climb());
-        SmartDashboard.putData("Commands/stop climber (dashboard)", m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
-        SmartDashboard.putData("Commands/Reset climber (dashboard)", m_climberSubsystem.setToAngleCommand(99));
+        SmartDashboard.putData("Commands/Prep Climber", m_climberSubsystem.prepClimber());
+        SmartDashboard.putData("Commands/Auto L1 Climb", m_climberSubsystem.autoL1Climb());
+        SmartDashboard.putData("Commands/Stop Climber", m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
+        SmartDashboard.putData("Commands/Reset Climber", m_climberSubsystem.resetClimber());
     }
 
     public Command getAutonomousCommand() {
