@@ -16,6 +16,7 @@ import edu.wpi.first.cscore.CvSink;
 import edu.wpi.first.cscore.CvSource;
 import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.util.PixelFormat;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Threads;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -26,11 +27,12 @@ public class CameraSubsystem extends SubsystemBase {
     Thread visionThread;
 
     public CameraSubsystem() {
-        UsbCamera camera = CameraServer.startAutomaticCapture();
-        camera.setPixelFormat(PixelFormat.kYUYV);
-        camera.setFPS(20); // http:roborio-10070-frc.local:1181
-        camera.setResolution(320, 240);
-
+        if (RobotBase.isReal()) {
+            UsbCamera camera = CameraServer.startAutomaticCapture();
+            camera.setPixelFormat(PixelFormat.kYUYV);
+            camera.setFPS(20); // http:roborio-10070-frc.local:1181
+            camera.setResolution(320, 240);
+        }
         // m_detector = new AprilTagDetector();
         // m_detector.addFamily("tag36h11");
 
