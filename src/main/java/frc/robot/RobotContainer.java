@@ -25,7 +25,7 @@ import static frc.robot.Constants.OperatorConstants.*;
 public class RobotContainer {
 
     private final DriveSubsystem m_driveSubsystem = new DriveSubsystem();
-    //private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
+    private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
     private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
    
