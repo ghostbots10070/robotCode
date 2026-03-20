@@ -42,20 +42,12 @@ public class Robot extends TimedRobot {
      * for any initialization code.
      */
     private Command m_autonomousCommand;
-    private long m_simStartTime;
-    private boolean m_simMatchRunning = false;
 
     private RobotContainer m_robotContainer;
-
-    private AprilTagDetector m_detector;
-    Thread visionThread;
-
-    private AnalogInput climberPotentiometer;
 
     @Override
     public void robotInit() {
         m_robotContainer = new RobotContainer();
-        //climberPotentiometer = new AnalogInput(Constants.ClimbConstants.CLIMBER_POTENTIOMETER_CHANNEL);
     }
 
     @Override
@@ -65,36 +57,18 @@ public class Robot extends TimedRobot {
         if (m_autonomousCommand != null) {
             m_autonomousCommand.schedule();
         }
-        
-        if (SmartDashboard.getBoolean("Simulate Match Cycle", false)) {
-            m_simStartTime = System.currentTimeMillis();
-            m_simMatchRunning = true;
-        }
     }
 
     @Override
     public void robotPeriodic() {
-        // Switch thread to high priority to improve loop timing
-        Threads.setCurrentThreadPriority(true, 99);
-
         // Runs the Scheduler. This is responsible for polling buttons, adding
         // newly-scheduled commands, running already-scheduled commands, removing
         // finished or interrupted commands, and running subsystem periodic() methods.
         // This must be called from the robot's periodic block in order for anything in
         // the Command-based framework to work.
         CommandScheduler.getInstance().run();
+
         MatchStatusPublisher.publish();
-        // System.out.println("called scheduler");
-
-        // Return to normal thread priority
-        Threads.setCurrentThreadPriority(false, 10);
-        // if (m_robotContainer.enableAutoProfiling) {
-        // System.out.println("WARNING, AUTO PROFILE IS ENABLED!");
-        // }
-
-        // SmartDashboard.putData("Climber/Raw", climberPotentiometer);
-        // SmartDashboard.putNumber("Climber/voltage", climberPotentiometer.getVoltage());
-        // SmartDashboard.putNumber("Climber/avgVoltage", climberPotentiometer.getAverageVoltage());
     }
 
     @Override
@@ -124,37 +98,5 @@ public class Robot extends TimedRobot {
 
     @Override
     public void testPeriodic() {
-    }
-
-    @Override
-    public void simulationInit() {
-        // Mock being connected to a field / FMS
-        DriverStationSim.setFmsAttached(true);
-        DriverStationSim.setAllianceStationId(edu.wpi.first.hal.AllianceStationID.Blue1);
-        SmartDashboard.setDefaultBoolean("Simulate Match Cycle", false);
-        DriverStationSim.notifyNewData();
-    }
-
-    @Override
-    public void simulationPeriodic() {
-        if (m_simMatchRunning) {
-            double elapsedSeconds = (System.currentTimeMillis() - m_simStartTime) / 1000.0;
-            double matchTimeRemaining = 150.0 - elapsedSeconds;
-
-            if (matchTimeRemaining <= 135.0 && DriverStationSim.getAutonomous()) {
-                // Transition to Teleop
-                DriverStationSim.setAutonomous(false);
-            }
-
-            if (matchTimeRemaining < 0) {
-                DriverStationSim.setEnabled(false);
-                matchTimeRemaining = 0;
-                m_simMatchRunning = false;
-            }
-
-            DriverStationSim.setMatchTime(matchTimeRemaining);
-            DriverStationSim.notifyNewData(); // Make sure the station pushes the simulated updates
-        }
-        MatchStatusPublisher.publish();
-    }
+    }    
 }
