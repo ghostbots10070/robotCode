@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 /**
  * Publishes match timing and phase-shift state for Elastic/SmartDashboard.
  */
+// https://docs.wpilib.org/en/stable/docs/yearly-overview/2026-game-data.html
 public final class MatchStatusPublisher {
     private MatchStatusPublisher() {
     }

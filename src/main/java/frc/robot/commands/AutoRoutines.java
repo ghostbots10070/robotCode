@@ -4,14 +4,17 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.FuelSubsystem;
+import frc.robot.subsystems.ClimberSubsystem;
 
 public class AutoRoutines {
     private DriveSubsystem drivetrain;
+    private ClimberSubsystem climberSubsystem;
     private FuelSubsystem fuelSubsystem;
 
-    public AutoRoutines(DriveSubsystem driveSubsystem, FuelSubsystem ballSubsystem) {
+    public AutoRoutines(DriveSubsystem driveSubsystem, FuelSubsystem ballSubsystem, ClimberSubsystem climberSubsystem) {
         this.drivetrain = driveSubsystem;
         this.fuelSubsystem = ballSubsystem;
+        this.climberSubsystem = climberSubsystem;
     }
 
     public Command basicAuto() {
@@ -26,6 +29,18 @@ public class AutoRoutines {
             drivetrain.movePositionCommand(1.5).withTimeout(10),
             new LaunchSequence(fuelSubsystem).withTimeout(10)
         );
+    }
+    public Command fullAuto() {
+       return Commands.sequence(
+            Commands.parallel(
+                drivetrain.driveDistanceCommand(2.03, 0.1).withTimeout(5),
+                climberSubsystem.prepClimber().withTimeout(5)
+            ),
+            new LaunchSequence(fuelSubsystem).withTimeout(9),
+            //fuelSubsystem.stop().withTimeout(0.1),
+            climberSubsystem.autoL1Climb().withTimeout(5)
+        );
+
     }
     // public Command driveAndIntake() {
     //     return Commands.sequence(

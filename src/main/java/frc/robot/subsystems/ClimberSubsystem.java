@@ -27,7 +27,7 @@ public class ClimberSubsystem extends SubsystemBase {
     private AnalogInput rawClimberPotentiometer;
 
     private double maxAngle = 170; // when the climber is inside the robot
-    private double minAngle = 1; // when the climber is fully lowered
+    private double minAngle = 2; // when the climber is fully lowered
 
     /** Creates a new CANBallSubsystem. */
     public ClimberSubsystem() {
@@ -52,11 +52,11 @@ public class ClimberSubsystem extends SubsystemBase {
 
     // A method to set the percentage of the climber
     public void setClimber(double power) {
-        if (power > 0 && climberPotentiometer.get() >= maxAngle) {
-            power = 0; // Prevent moving up if at or above max angle
-        } else if (power < 0 && climberPotentiometer.get() <= minAngle) {
-            power = 0; // Prevent moving down if at or below min angle
-        }
+        // if (power > 0 && climberPotentiometer.get() >= maxAngle) {
+        //     power = 0; // Prevent moving up if at or above max angle
+        // } else if (power < 0 && climberPotentiometer.get() <= minAngle) {
+        //     power = 0; // Prevent moving down if at or below min angle
+        // }
 
         climberMotor.set(power);
         lastSetPower = power; // Track last set power for tests
@@ -129,11 +129,11 @@ public class ClimberSubsystem extends SubsystemBase {
     }
 
     public Command prepClimber() {
-        return setToAngleCommand(0);
+        return setToAngleCommand(20);
     }
 
     public Command autoL1Climb() {
-        return setToAngleCommand(120);
+        return setToAngleCommand(99);
     }
 
     @Override

@@ -44,10 +44,10 @@ public class RobotContainer {
 
         autoChooser = AutoBuilder.buildAutoChooser();
 
-        AutoRoutines routines = new AutoRoutines(m_driveSubsystem, m_fuelSubsystem);
+        AutoRoutines routines = new AutoRoutines(m_driveSubsystem, m_fuelSubsystem, m_climberSubsystem);
         autoChooser.setDefaultOption("Basic HH Auto", routines.basicAuto());
         autoChooser.addOption("Encoder Position Auto", routines.encoderPositionAuto());
-
+        autoChooser.addOption("full auto", routines.fullAuto());
 
         SmartDashboard.putData("Auto Chooser", autoChooser);
         SmartDashboard.putNumber("Target Angle", 0);
@@ -56,12 +56,12 @@ public class RobotContainer {
         SmartDashboard.putString("Speed Multiplier", "100%");
 
         NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
-         SlewRateLimiter filter = new SlewRateLimiter(0.5);
+        SlewRateLimiter filter = new SlewRateLimiter(1);
         SlewRateLimiter filter3 = new SlewRateLimiter(0.5);
         m_driveSubsystem.setDefaultCommand(new ArcadeDrive(
                 m_driveSubsystem,
                 () -> filter.calculate(-m_driverController.getLeftY()),
-                () -> filter3.calculate(-m_driverController.getRightX())
+                () -> -m_driverController.getRightX()
                  
         ));  
 
@@ -70,7 +70,8 @@ public class RobotContainer {
 
         m_climberSubsystem.setDefaultCommand(m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
 
-        SmartDashboard.putData("Commands/move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .5));
+        SmartDashboard.putData("Commands/move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .25));
+        SmartDashboard.putData("Commands/move 2m forward", m_driveSubsystem.driveDistanceCommand(2.03, .15));
         SmartDashboard.putData("Commands/Shoot (dashboard)",  m_fuelSubsystem.shootAtSpeedCommand(3000, 100)); // TODO: figure out the right rpm and tolerance
         SmartDashboard.putData("Commands/Intake (dashboard)", new Intake(m_fuelSubsystem));
         SmartDashboard.putData("Commands/Eject (dashboard)", new Eject(m_fuelSubsystem));
@@ -80,7 +81,7 @@ public class RobotContainer {
         SmartDashboard.putData("Commands/Prep Climber (dashboard)", m_climberSubsystem.prepClimber());
         SmartDashboard.putData("Commands/Auto L1 Climb (dashboard)", m_climberSubsystem.autoL1Climb());
         SmartDashboard.putData("Commands/stop climber (dashboard)", m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
-        SmartDashboard.putData("Commands/Reset climber (dashboard)", m_climberSubsystem.setToAngleCommand(98));
+        SmartDashboard.putData("Commands/Reset climber (dashboard)", m_climberSubsystem.setToAngleCommand(99));
     }
 
     public Command getAutonomousCommand() {

@@ -21,6 +21,7 @@ import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.util.PixelFormat;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -49,9 +50,12 @@ public class Robot extends TimedRobot {
     private AprilTagDetector m_detector;
     Thread visionThread;
 
+    private AnalogInput climberPotentiometer;
+
     @Override
     public void robotInit() {
         m_robotContainer = new RobotContainer();
+        //climberPotentiometer = new AnalogInput(Constants.ClimbConstants.CLIMBER_POTENTIOMETER_CHANNEL);
     }
 
     @Override
@@ -87,6 +91,10 @@ public class Robot extends TimedRobot {
         // if (m_robotContainer.enableAutoProfiling) {
         // System.out.println("WARNING, AUTO PROFILE IS ENABLED!");
         // }
+
+        // SmartDashboard.putData("Climber/Raw", climberPotentiometer);
+        // SmartDashboard.putNumber("Climber/voltage", climberPotentiometer.getVoltage());
+        // SmartDashboard.putNumber("Climber/avgVoltage", climberPotentiometer.getAverageVoltage());
     }
 
     @Override
