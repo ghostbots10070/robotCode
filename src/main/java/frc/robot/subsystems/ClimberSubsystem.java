@@ -91,16 +91,8 @@ public class ClimberSubsystem extends SubsystemBase {
 
     // A method to set the percentage of the climber
     public void setClimber(double power) {
-        if (SmartDashboard.getBoolean("Climber/Safety Limiter", true)) {
-            if (power > 0 && climberPotentiometer.get() >= maxAngle) {
-                power = 0; // Prevent moving up if at or above max angle
-            } else if (power < 0 && climberPotentiometer.get() <= minAngle) {
-                power = 0; // Prevent moving down if at or below min angle
-            }
-        }
-
-        climberMotor.set(power);
         lastSetPower = power; // Track last set power for tests
+        climberMotor.set(power);
     }
 
     // A method to stop the climber
@@ -183,6 +175,17 @@ public class ClimberSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
+        if (SmartDashboard.getBoolean("Climber/Safety Limiter", true)) {
+            if (lastSetPower > 0 && climberPotentiometer.get() >= maxAngle) {
+                lastSetPower = 0; // Prevent moving up if at or above max angle
+                stop();
+            } else if (lastSetPower < 0 && climberPotentiometer.get() <= minAngle) {
+                lastSetPower = 0; // Prevent moving down if at or below min angle
+                stop();
+            }
+        }
+
+
         // This method will be called once per scheduler run
         SmartDashboard.putData("Climber/Raw", climberPotentiometer);
        // SmartDashboard.putNumber("Climber/voltage", climberPotentiometer.getVoltage());
