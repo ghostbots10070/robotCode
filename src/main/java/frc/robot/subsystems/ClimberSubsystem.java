@@ -10,6 +10,7 @@ import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.AnalogPotentiometer;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -26,8 +27,17 @@ public class ClimberSubsystem extends SubsystemBase {
     private AnalogPotentiometer climberPotentiometer;
     private AnalogInput rawClimberPotentiometer;
 
+    private static final String maxAngleKey = "ClimberMaxAngle";
+    private static final String minAngleKey = "ClimberMinAngle";
+
+    private static final String resetAngleKey = "ClimberResetAngle";
+    private static final String prepAngleKey = "ClimberPrepAngle";
+    private static final String l1ClimbAngleKey = "ClimberL1ClimbAngle";
+
+
+    // these are the default values
     private double maxAngle = 170; // when the climber is inside the robot
-    private double minAngle = 2; // when the climber is fully lowered
+    private double minAngle = 10.6; // when the climber is fully lowered
 
     // TODO: use preferences
     // https://docs.wpilib.org/en/stable/docs/software/basic-programming/robot-preferences.html#reading-preferences
@@ -47,6 +57,13 @@ public class ClimberSubsystem extends SubsystemBase {
         climbConfig.idleMode(IdleMode.kBrake);
         climberMotor.configure(climbConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
+        Preferences.initDouble(maxAngleKey, maxAngle);
+        Preferences.initDouble(minAngleKey, minAngle);
+        Preferences.initDouble(resetAngleKey, resetAngle);
+        Preferences.initDouble(prepAngleKey, prepAngle);
+        Preferences.initDouble(l1ClimbAngleKey, l1ClimbAngle);
+
+        refreshPreferences();
 
         rawClimberPotentiometer = new AnalogInput(CLIMBER_POTENTIOMETER_CHANNEL);
         climberPotentiometer = new AnalogPotentiometer(rawClimberPotentiometer, 180);
@@ -58,6 +75,18 @@ public class ClimberSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Climber/L1 Climb Angle", l1ClimbAngle);
 
         SmartDashboard.putBoolean("Climber/Safety Limiter", true);
+    }
+
+    public void refreshPreferences() {
+        maxAngle = Preferences.getDouble(maxAngleKey, maxAngle);
+        minAngle = Preferences.getDouble(minAngleKey, minAngle);
+        resetAngle = Preferences.getDouble(resetAngleKey, resetAngle);
+        prepAngle = Preferences.getDouble(prepAngleKey, prepAngle);
+        l1ClimbAngle = Preferences.getDouble(l1ClimbAngleKey, l1ClimbAngle);
+
+        SmartDashboard.putNumber("Climber/Prep Angle", prepAngle);
+        SmartDashboard.putNumber("Climber/Reset Angle", resetAngle);
+        SmartDashboard.putNumber("Climber/L1 Climb Angle", l1ClimbAngle);
     }
 
     // A method to set the percentage of the climber

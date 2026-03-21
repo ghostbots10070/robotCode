@@ -193,7 +193,7 @@
           {
             "title": "Robot X",
             "x": 1408.0,
-            "y": 128.0,
+            "y": 384.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Text Display",
@@ -215,6 +215,19 @@
               "topic": "/SmartDashboard/Climber/Safety Limiter",
               "period": 0.06,
               "data_type": "boolean"
+            }
+          },
+          {
+            "title": "Climber Angle",
+            "x": 1280.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Climber/Angle",
+              "period": 0.06,
+              "data_type": "double"
             }
           }
         ]
@@ -469,13 +482,149 @@
     {
       "name": "Climber Diagnostics",
       "grid_layout": {
-        "layouts": [],
+        "layouts": [
+          {
+            "title": "Climber Preferences",
+            "x": 1024.0,
+            "y": 128.0,
+            "width": 384.0,
+            "height": 384.0,
+            "type": "List Layout",
+            "properties": {
+              "label_position": "TOP"
+            },
+            "children": [
+              {
+                "title": "ClimberL1ClimbAngle",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/Preferences/ClimberL1ClimbAngle",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": true
+                }
+              },
+              {
+                "title": "ClimberMaxAngle",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/Preferences/ClimberMaxAngle",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": true
+                }
+              },
+              {
+                "title": "ClimberMinAngle",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/Preferences/ClimberMinAngle",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": true
+                }
+              },
+              {
+                "title": "ClimberPrepAngle",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/Preferences/ClimberPrepAngle",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": true
+                }
+              },
+              {
+                "title": "ClimberResetAngle",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/Preferences/ClimberResetAngle",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": true
+                }
+              }
+            ]
+          },
+          {
+            "title": "Active Values",
+            "x": 768.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 384.0,
+            "type": "List Layout",
+            "properties": {
+              "label_position": "TOP"
+            },
+            "children": [
+              {
+                "title": "Reset Angle",
+                "x": 256.0,
+                "y": 512.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Large Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/Climber/Reset Angle",
+                  "period": 0.06,
+                  "data_type": "double"
+                }
+              },
+              {
+                "title": "L1 Climb Angle",
+                "x": 640.0,
+                "y": 640.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Large Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/Climber/L1 Climb Angle",
+                  "period": 0.06,
+                  "data_type": "double"
+                }
+              },
+              {
+                "title": "Prep Angle",
+                "x": 384.0,
+                "y": 640.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Large Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/Climber/Prep Angle",
+                  "period": 0.06,
+                  "data_type": "double"
+                }
+              }
+            ]
+          }
+        ],
         "containers": [
           {
             "title": "Climber Angle",
-            "x": 512.0,
+            "x": 384.0,
             "y": 256.0,
-            "width": 256.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Large Text Display",
             "properties": {
@@ -528,7 +677,7 @@
           },
           {
             "title": "Stop Climber",
-            "x": 768.0,
+            "x": 512.0,
             "y": 128.0,
             "width": 256.0,
             "height": 128.0,
@@ -542,7 +691,7 @@
           },
           {
             "title": "Potentiometer FIltered Voltage",
-            "x": 768.0,
+            "x": 512.0,
             "y": 256.0,
             "width": 256.0,
             "height": 128.0,
@@ -559,55 +708,30 @@
             }
           },
           {
-            "title": "Prep Angle",
-            "x": 1152.0,
-            "y": 128.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Large Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Climber/Prep Angle",
-              "period": 0.06,
-              "data_type": "double"
-            }
-          },
-          {
-            "title": "Reset Angle",
-            "x": 1152.0,
-            "y": 256.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Large Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Climber/Reset Angle",
-              "period": 0.06,
-              "data_type": "double"
-            }
-          },
-          {
-            "title": "L1 Climb Angle",
-            "x": 1152.0,
-            "y": 384.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Large Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Climber/L1 Climb Angle",
-              "period": 0.06,
-              "data_type": "double"
-            }
-          },
-          {
             "title": "Safety Limiter",
-            "x": 512.0,
+            "x": 384.0,
             "y": 128.0,
-            "width": 256.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Toggle Switch",
             "properties": {
               "topic": "/SmartDashboard/Climber/Safety Limiter",
               "period": 0.06,
               "data_type": "boolean"
+            }
+          },
+          {
+            "title": "Refresh Preferences (run if not restarting robot)",
+            "x": 896.0,
+            "y": 512.0,
+            "width": 384.0,
+            "height": 128.0,
+            "type": "Command",
+            "properties": {
+              "topic": "/SmartDashboard/Commands/Refresh Preferences",
+              "period": 0.06,
+              "show_type": true,
+              "maximize_button_space": true
             }
           }
         ]
