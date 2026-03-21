@@ -83,6 +83,7 @@ public class RobotContainer {
         SmartDashboard.putData("Commands/Auto L1 Climb", m_climberSubsystem.autoL1Climb());
         SmartDashboard.putData("Commands/Stop Climber", m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
         SmartDashboard.putData("Commands/Reset Climber", m_climberSubsystem.resetClimber());
+        SmartDashboard.putData("Commands/Refresh Preferences", m_climberSubsystem.runOnce(() -> m_climberSubsystem.refreshPreferences()).ignoringDisable(true));
     }
 
     public Command getAutonomousCommand() {
