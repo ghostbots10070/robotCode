@@ -36,8 +36,8 @@ public class AutoRoutines {
                 drivetrain.driveDistanceCommand(2.23, 0.1).withTimeout(7),
                 climberSubsystem.prepClimber().withTimeout(5)
             ),
-            new LaunchSequence(fuelSubsystem).withTimeout(9),
-            //fuelSubsystem.stop().withTimeout(0.1),
+            fuelSubsystem.shootAtSpeedCommand().withTimeout(5),
+            //Commands.runOnce(() -> fuelSubsystem.stop()).withTimeout(0.1),
             climberSubsystem.autoL1Climb().withTimeout(5)
         );
 

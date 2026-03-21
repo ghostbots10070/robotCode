@@ -73,7 +73,6 @@ public class RobotContainer {
 
         SmartDashboard.putData("Commands/move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .25));
         SmartDashboard.putData("Commands/move 2m forward", m_driveSubsystem.driveDistanceCommand(2.03, .15));
-        SmartDashboard.putData("Commands/Shoot (dashboard)",  m_fuelSubsystem.shootAtSpeedCommand(3000, 100)); // TODO: figure out the right rpm and tolerance
         SmartDashboard.putData("Commands/Intake (dashboard)", new Intake(m_fuelSubsystem));
         SmartDashboard.putData("Commands/Eject (dashboard)", new Eject(m_fuelSubsystem));
         SmartDashboard.putData("Commands/Climb Up (dashboard)", m_climberSubsystem.climbUpCommand());
@@ -129,6 +128,7 @@ public class RobotContainer {
         // Operator Controls
         m_operatorController.leftTrigger().whileTrue(new Intake(m_fuelSubsystem)); // gets ready to intake stuff
         m_operatorController.rightBumper().whileTrue(new LaunchSequence(m_fuelSubsystem)); // launch balls
+        m_operatorController.rightTrigger().whileTrue(m_fuelSubsystem.shootAtSpeedCommand());
         m_operatorController.x().whileTrue(new Eject(m_fuelSubsystem)); // eject balls out of the intake
         m_operatorController.povUp().whileTrue(m_climberSubsystem.climbUpCommand()); // climb up
         m_operatorController.povDown().whileTrue(m_climberSubsystem.climbDownCommand()); // climb down
