@@ -17,6 +17,8 @@ import edu.wpi.first.wpilibj2.command.Commands;
 
 import static frc.robot.Constants.ClimbConstants.*;
 
+import java.util.function.DoubleSupplier;
+
 public class ClimberSubsystem extends SubsystemBase {
     private final SparkMax climberMotor;
 
@@ -91,6 +93,14 @@ public class ClimberSubsystem extends SubsystemBase {
 
     // A method to set the percentage of the climber
     public void setClimber(double power) {
+        double currentAngle = climberPotentiometer.get();
+        boolean safetyEnabled = SmartDashboard.getBoolean("Climber/Safety Limiter", true);
+
+        if (safetyEnabled) {
+            if (power > 0 && currentAngle >= maxAngle) power = 0;
+            if (power < 0 && currentAngle <= minAngle) power = 0;
+        }
+
         lastSetPower = power; // Track last set power for tests
         climberMotor.set(power);
     }
@@ -111,35 +121,25 @@ public class ClimberSubsystem extends SubsystemBase {
     }
 
     public Command climbUpCommand() {
-        return Commands.startEnd(
+        return Commands.runEnd(
                 () -> setClimber(CLIMBER_MOTOR_UP_PERCENT),
                 this::stop,
                 this);
     }
 
     public Command climbDownCommand() {
-        return Commands.startEnd(
+        return Commands.runEnd(
                 () -> setClimber(CLIMBER_MOTOR_DOWN_PERCENT),
                 this::stop,
                 this);
     }
 
-    public boolean shouldntGoDownMore() {
-        double currentAngle = climberPotentiometer.get();
-        return currentAngle <= minAngle;
-    }
-
-    public boolean shouldntGoUpMore() {
-        double currentAngle = climberPotentiometer.get();
-        return currentAngle >= maxAngle;
-    }
-
-    public Command setToAngleCommand(double targetAngle) {
-        final boolean goingUp = targetAngle > climberPotentiometer.get();
-
+    public Command setToAngleCommand(DoubleSupplier targetAngleSupplier) {
         return Commands.run(() -> {
             double currentAngle = climberPotentiometer.get();
-            
+            double targetAngle = targetAngleSupplier.getAsDouble();
+
+            boolean goingUp = targetAngle > currentAngle;
 
             if (goingUp && currentAngle >= maxAngle) {
                 stop();
@@ -157,35 +157,24 @@ public class ClimberSubsystem extends SubsystemBase {
                 stop();
             }
         }, this)
-        .until(() -> Math.abs(climberPotentiometer.get() - targetAngle) <= 1.0)
+        .until(() -> Math.abs(climberPotentiometer.get() - targetAngleSupplier.getAsDouble()) <= 1.0)
         .finallyDo(interrupted -> stop());
     }
 
     public Command prepClimber() {
-        return setToAngleCommand(prepAngle);
+        return setToAngleCommand(() -> prepAngle);
     }
 
     public Command autoL1Climb() {
-        return setToAngleCommand(l1ClimbAngle);
+        return setToAngleCommand(() -> l1ClimbAngle);
     }
 
     public Command resetClimber() {
-        return setToAngleCommand(resetAngle);
+        return setToAngleCommand(() -> resetAngle);
     }
 
     @Override
     public void periodic() {
-        if (SmartDashboard.getBoolean("Climber/Safety Limiter", true)) {
-            if (lastSetPower > 0 && climberPotentiometer.get() >= maxAngle) {
-                lastSetPower = 0; // Prevent moving up if at or above max angle
-                stop();
-            } else if (lastSetPower < 0 && climberPotentiometer.get() <= minAngle) {
-                lastSetPower = 0; // Prevent moving down if at or below min angle
-                stop();
-            }
-        }
-
-
         // This method will be called once per scheduler run
         SmartDashboard.putData("Climber/Raw", climberPotentiometer);
        // SmartDashboard.putNumber("Climber/voltage", climberPotentiometer.getVoltage());
