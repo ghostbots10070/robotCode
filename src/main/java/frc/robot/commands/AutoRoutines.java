@@ -33,7 +33,7 @@ public class AutoRoutines {
     public Command fullAuto() {
        return Commands.sequence(
             Commands.parallel(
-                drivetrain.driveDistanceCommand(2.03, 0.1).withTimeout(5),
+                drivetrain.driveDistanceCommand(2.23, 0.1).withTimeout(7),
                 climberSubsystem.prepClimber().withTimeout(5)
             ),
             new LaunchSequence(fuelSubsystem).withTimeout(9),
