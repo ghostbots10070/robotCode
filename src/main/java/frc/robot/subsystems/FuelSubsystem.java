@@ -152,22 +152,24 @@ public class FuelSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Sim/Fuel/IndexerPercent", indexerPercent);
     }
 
-    private boolean launcherAtSpeed(double targetRPM, double toleranceRPM) {
-        double left = leftIntakeLauncherEncoder.getVelocity();
-        double right = rightIntakeLauncherEncoder.getVelocity();
-        return Math.abs(left - targetRPM) <= toleranceRPM && Math.abs(right - targetRPM) <= toleranceRPM;
+    // Helper method to check if both launcher motors are at the target voltage (within tolerance)
+    private boolean launcherAtVoltage(double targetVoltage, double tolerance) {
+        double leftApplied = LeftIntakeLauncher.getAppliedOutput() * NEO_MAX_VOLTAGE;
+        double rightApplied = RightIntakeLauncher.getAppliedOutput() * NEO_MAX_VOLTAGE;
+        return Math.abs(leftApplied - targetVoltage) <= tolerance && Math.abs(rightApplied - targetVoltage) <= tolerance;
     }
 
     // TODO: figure out the right rpm
-    public Command shootAtSpeedCommand(double targetRPM, double toleranceRPM) {
+    public Command shootAtSpeedCommand() {
+        double launcherVoltage = LAUNCHING_LAUNCHER_PERCENT * NEO_MAX_VOLTAGE;
+        double voltageTolerance = 0.5; // volts, adjust as needed
         return Commands.sequence(
                     Commands.runOnce(() -> {
-                        leftIntakeLauncherPID.setSetpoint(targetRPM, SparkMax.ControlType.kVelocity);
-                        rightIntakeLauncherPID.setSetpoint(targetRPM, SparkMax.ControlType.kVelocity);
+                        setShooterVoltage(launcherVoltage);
                     }, this),
-                    Commands.waitUntil(() -> launcherAtSpeed(targetRPM, toleranceRPM)),
+                    Commands.waitUntil(() -> launcherAtVoltage(launcherVoltage, voltageTolerance)),
                     Commands.run(() -> setFeederRoller(INDEXER_LAUNCHING_PERCENT), this))
                 .finallyDo(interrupted -> stop())
-                .withName("ShootAtRPM");
+                .withName("ShootAtVoltage");
     }
 }
