@@ -20,6 +20,8 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
+import edu.wpi.first.wpilibj.SerialPort;
+
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.hal.SimDouble;
@@ -52,13 +54,12 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static frc.robot.Constants.DriveConstants.*;
 
-@Logged
 public class DriveSubsystem extends SubsystemBase {    
     // SysID
     private final SysIdRoutine m_sysIdRoutine;
 
     // gyro
-    private final AHRS m_gyro;
+    private AHRS m_gyro; // TODO: should be final once everything fixed
 
     // track robot field location for dashboard
     private boolean gyroZeroPending = true;
@@ -127,7 +128,10 @@ public class DriveSubsystem extends SubsystemBase {
 
         // init gyro
         m_gyro = new AHRS(NavXComType.kMXP_SPI);
-        SmartDashboard.putData("Gyro", m_gyro);
+        //m_gyro =  new AHRS(SerialPort.Port.kUSB);
+        //SmartDashboard.putData("Gyro", m_gyro);
+        System.out.println("NavX connected after startup: " + m_gyro.isConnected());
+System.out.println("NavX yaw: " + m_gyro.getYaw());
 
         // Configure Heading PID
         m_headingPID.enableContinuousInput(-180, 180);
@@ -153,16 +157,16 @@ public class DriveSubsystem extends SubsystemBase {
 
         // 2. Build specific configs and push them to hardware INLINE
         leftLeader.configure(new SparkMaxConfig().apply(baseDriveConfig),
-                ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+                ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 
         leftFollower.configure(new SparkMaxConfig().apply(baseDriveConfig).follow(leftLeader),
-                ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+                ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 
         rightLeader.configure(new SparkMaxConfig().apply(baseDriveConfig).inverted(true),
-                ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+                ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 
         rightFollower.configure(new SparkMaxConfig().apply(baseDriveConfig).follow(rightLeader),
-                ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+                ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 
         resetEncoders();
 
@@ -355,12 +359,9 @@ public class DriveSubsystem extends SubsystemBase {
         // }
         // } else {
         m_targetHeading = m_gyro.getRotation2d().getDegrees();
-
-                SmartDashboard.putNumber("Current Heading", m_targetHeading);
-
         // }
 
-        SmartDashboard.putNumber("fwdSpeed", fwdSpeed);
+        //SmartDashboard.putNumber("fwdSpeed", fwdSpeed);
 
         if (m_closedLoopMode) {
             // Closed Loop: Positive finalRot turns CCW (Left)
@@ -481,24 +482,30 @@ public class DriveSubsystem extends SubsystemBase {
     // }
     // }
 
-    @Override
-    public void periodic() {
-        SmartDashboard.putData("Gyro", m_gyro);
+    private int m_loopCount = 1;
 
+@Override
+public void periodic() {
+    // Read gyro ONCE, reuse the result
+    Rotation2d currentRotation = m_gyro.getRotation2d();
 
-        // Fix for infinite reset loop
-        if (gyroZeroPending && !m_gyro.isCalibrating()) {
-            m_gyro.reset();
-            gyroZeroPending = false; // Flag false immediately to prevent re-entry
-        }
-        
+    /*if (gyroZeroPending && !m_gyro.isCalibrating()) {
+        m_gyro.reset();
+        gyroZeroPending = false;
+    }*/
 
-        m_driveOdometry.update(m_gyro.getRotation2d(), m_encoderLeftLeader.getPosition(),
-                m_encoderRightLeader.getPosition());
-        m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
+    m_driveOdometry.update(currentRotation,
+        m_encoderLeftLeader.getPosition(),
+        m_encoderRightLeader.getPosition());
+    m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
 
+    // Only update dashboard every 5 loops (~100ms) — plenty fast for a human to read
+    if (m_loopCount++ % 5 == 0) {
+        SmartDashboard.putNumber("Gyro Heading", currentRotation.getDegrees());
+        SmartDashboard.putBoolean("Gyro Connected", m_gyro.isConnected());
         postCords();
     }
+}
 
     @Override
     public void simulationPeriodic() {
