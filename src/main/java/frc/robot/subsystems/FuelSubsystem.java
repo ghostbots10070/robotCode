@@ -43,7 +43,6 @@ public class FuelSubsystem extends SubsystemBase {
 
     /** Creates a new CANBallSubsystem. */
     public FuelSubsystem() {
-        // create brushed motors for each of the motors on the launcher mechanism
         LeftIntakeLauncher = new SparkMax(LEFT_INTAKE_LAUNCHER_MOTOR_ID, MotorType.kBrushless);
         RightIntakeLauncher = new SparkMax(RIGHT_INTAKE_LAUNCHER_MOTOR_ID, MotorType.kBrushless);
         Indexer = new SparkMax(INDEXER_MOTOR_ID, MotorType.kBrushed);
@@ -54,27 +53,24 @@ public class FuelSubsystem extends SubsystemBase {
         leftIntakeLauncherEncoder = LeftIntakeLauncher.getEncoder();
         rightIntakeLauncherEncoder = RightIntakeLauncher.getEncoder();
 
-        // create the configuration for the feeder roller, set a current limit and apply
-        // the config to the controller
         SparkMaxConfig feederConfig = new SparkMaxConfig();
         feederConfig.smartCurrentLimit(INDEXER_MOTOR_CURRENT_LIMIT);
         feederConfig.inverted(false);
         Indexer.configure(feederConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-        // create the configuration for the launcher roller, set a current limit, set
-        // the motor to inverted so that positive values are used for both intaking and
-        // launching, and apply the config to the controller
         SparkMaxConfig launcherConfig = new SparkMaxConfig();
 
         ClosedLoopConfig pidConfig = new ClosedLoopConfig();
-
         pidConfig.p(0.0002);
         pidConfig.i(0);
         pidConfig.d(0);
-        pidConfig.velocityFF(0.00018);
+        // In constructor
+SmartDashboard.putNumber("Tuning/kP", 0.0002);
+SmartDashboard.putNumber("Tuning/kI", 0.0);
+SmartDashboard.putNumber("Tuning/kD", 0.0);
+        //pidConfig.velocityFF(0.00018);
 
         launcherConfig.apply(pidConfig);
-
         launcherConfig.smartCurrentLimit(LAUNCHER_MOTOR_CURRENT_LIMIT);
         launcherConfig.voltageCompensation(12);
         launcherConfig.idleMode(IdleMode.kCoast);
@@ -84,55 +80,117 @@ public class FuelSubsystem extends SubsystemBase {
         launcherConfig.inverted(false);
         LeftIntakeLauncher.configure(launcherConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-        // Motor sims
         DCMotor launcherMotor = DCMotor.getNEO(1);
         DCMotor indexerMotor = DCMotor.getNeo550(1);
         leftLauncherSim = new SparkMaxSim(LeftIntakeLauncher, launcherMotor);
         rightLauncherSim = new SparkMaxSim(RightIntakeLauncher, launcherMotor);
         indexerSim = new SparkMaxSim(Indexer, indexerMotor);
 
-        // put default values for various fuel operations onto the dashboard
-        // all commands using this subsystem pull values from the dashbaord to allow
-        // you to tune the values easily, and then replace the values in Constants.java
-        // with your new values. For more information, see the Software Guide.
-        SmartDashboard.putNumber("Intaking feeder roller value",
-                INDEXER_INTAKING_PERCENT);
-        SmartDashboard.putNumber("Intaking intake roller value",
-                INTAKE_INTAKING_PERCENT);
-        SmartDashboard.putNumber("Launching feeder roller value",
-                INDEXER_LAUNCHING_PERCENT);
-        SmartDashboard.putNumber("Launching launcher roller value",
-                LAUNCHING_LAUNCHER_PERCENT);
-        SmartDashboard.putNumber("Launching spin-up feeder value",
-                INDEXER_SPIN_UP_PRE_LAUNCH_PERCENT);
+        SmartDashboard.putNumber("Intaking feeder roller value", INDEXER_INTAKING_PERCENT);
+        SmartDashboard.putNumber("Intaking intake roller value", INTAKE_INTAKING_PERCENT);
+        SmartDashboard.putNumber("Launching feeder roller value", INDEXER_LAUNCHING_PERCENT);
+        SmartDashboard.putNumber("Launching launcher RPM", LAUNCHING_LAUNCHER_RPM); // <-- replaces percent
+        SmartDashboard.putNumber("Launching RPM tolerance", LAUNCHING_RPM_TOLERANCE);
+        SmartDashboard.putNumber("Launching spin-up feeder value", INDEXER_SPIN_UP_PRE_LAUNCH_PERCENT);
     }
 
-    // A method to set the voltage of the intake roller
     public void setIntakeLauncherRoller(double power) {
         LeftIntakeLauncher.set(power);
-        RightIntakeLauncher.set(power); // positive for shooting
+        RightIntakeLauncher.set(power);
     }
 
-    public void setShooterVoltage(double voltage) {
-        leftIntakeLauncherPID.setSetpoint(voltage, SparkMax.ControlType.kVoltage);
-        rightIntakeLauncherPID.setSetpoint(voltage, SparkMax.ControlType.kVoltage);
+    /** Commands both launcher motors to a target RPM using the onboard velocity PID. */
+    public void setShooterRPM(double rpm) {
+        leftIntakeLauncherPID.setSetpoint(rpm, SparkMax.ControlType.kVelocity);
+        rightIntakeLauncherPID.setSetpoint(rpm, SparkMax.ControlType.kVelocity);
     }
 
-    // A method to set the voltage of the intake roller
     public void setFeederRoller(double power) {
-        Indexer.set(power); // positive for shooting
+        Indexer.set(power);
     }
 
-    // A method to stop the rollers
     public void stop() {
         Indexer.set(0);
         LeftIntakeLauncher.set(0);
         RightIntakeLauncher.set(0);
     }
 
+    /** Returns true when both launcher motors are within [tolerance] RPM of [targetRPM]. */
+    private boolean launcherAtRPM(double targetRPM, double tolerance) {
+        double leftRPM = leftIntakeLauncherEncoder.getVelocity();
+        double rightRPM = rightIntakeLauncherEncoder.getVelocity();
+        double leftError = Math.abs(leftRPM - targetRPM);
+        double rightError = Math.abs(rightRPM - targetRPM);
+        boolean atTarget = leftError <= tolerance && rightError <= tolerance;
+
+        SmartDashboard.putNumber("Debug/Fuel/LeftRPM", leftRPM);
+        SmartDashboard.putNumber("Debug/Fuel/RightRPM", rightRPM);
+        SmartDashboard.putNumber("Debug/Fuel/RPMTarget", targetRPM);
+        SmartDashboard.putNumber("Debug/Fuel/LeftRPMError", leftError);
+        SmartDashboard.putNumber("Debug/Fuel/RightRPMError", rightError);
+        SmartDashboard.putBoolean("Debug/Fuel/AtRPM", atTarget);
+
+        return atTarget;
+    }
+
+    public Command shootAtSpeedCommand() {
+        return Commands.sequence(
+            // Read targets once upfront so they can't drift mid-command
+            Commands.runOnce(() -> {
+                double targetRPM = SmartDashboard.getNumber(
+                    "Launching launcher RPM", LAUNCHING_LAUNCHER_RPM);
+                setShooterRPM(targetRPM);
+            }, this),
+
+            // Wait until flywheel is actually at speed before feeding anything
+            Commands.waitUntil(() -> {
+                double targetRPM = SmartDashboard.getNumber(
+                    "Launching launcher RPM", LAUNCHING_LAUNCHER_RPM);
+                double tolerance = SmartDashboard.getNumber(
+                    "Launching RPM tolerance", LAUNCHING_RPM_TOLERANCE);
+                return launcherAtRPM(targetRPM, tolerance);
+            }),
+
+            // Feed only when flywheel is at speed — pauses between balls to let it recover
+            Commands.run(() -> {
+                double targetRPM = SmartDashboard.getNumber(
+                    "Launching launcher RPM", LAUNCHING_LAUNCHER_RPM);
+                double tolerance = SmartDashboard.getNumber(
+                    "Launching RPM tolerance", LAUNCHING_RPM_TOLERANCE);
+                double feederPercent = SmartDashboard.getNumber(
+                    "Launching feeder roller value", INDEXER_LAUNCHING_PERCENT);
+
+                if (launcherAtRPM(targetRPM, tolerance)) {
+                    setFeederRoller(feederPercent); // up to speed → feed
+                } else {
+                    setFeederRoller(0);             // recovering → wait
+                }
+            }, this)
+        )
+        .finallyDo(interrupted -> stop())
+        .withName("ShootAtRPM");
+    }
+
     @Override
     public void periodic() {
-        // This method will be called once per scheduler run
+        SmartDashboard.putNumber("Fuel/Indexer Current", Indexer.getOutputCurrent());
+        SmartDashboard.putNumber("Fuel/Left RPM", leftIntakeLauncherEncoder.getVelocity());
+        SmartDashboard.putNumber("Fuel/Right RPM", rightIntakeLauncherEncoder.getVelocity());
+
+        SmartDashboard.putBoolean("Fuel/Left Connected", LeftIntakeLauncher.getBusVoltage() > 1);
+        SmartDashboard.putBoolean("Fuel/Right Connected", RightIntakeLauncher.getBusVoltage() > 1);
+        SmartDashboard.putBoolean("Fuel/Indexer Connected", Indexer.getBusVoltage() > 1);
+
+        // In periodic()
+ClosedLoopConfig pidConfig = new ClosedLoopConfig();
+pidConfig.p(SmartDashboard.getNumber("Tuning/kP", 0.0002));
+pidConfig.i(SmartDashboard.getNumber("Tuning/kI", 0.0));
+pidConfig.d(SmartDashboard.getNumber("Tuning/kD", 0.0));
+
+SparkMaxConfig config = new SparkMaxConfig();
+config.apply(pidConfig);
+LeftIntakeLauncher.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+RightIntakeLauncher.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
     }
 
     @Override
@@ -143,33 +201,8 @@ public class FuelSubsystem extends SubsystemBase {
         rightLauncherSim.iterate(RightIntakeLauncher.getAppliedOutput() * batteryVoltage, batteryVoltage, kSimDt);
         indexerSim.iterate(Indexer.getAppliedOutput() * batteryVoltage, batteryVoltage, kSimDt);
 
-        double leftRPM = leftIntakeLauncherEncoder.getVelocity();
-        double rightRPM = rightIntakeLauncherEncoder.getVelocity();
-        double indexerPercent = Indexer.getAppliedOutput();
-
-        SmartDashboard.putNumber("Sim/Fuel/LeftRPM", leftRPM);
-        SmartDashboard.putNumber("Sim/Fuel/RightRPM", rightRPM);
-        SmartDashboard.putNumber("Sim/Fuel/IndexerPercent", indexerPercent);
-    }
-
-    // Helper method to check if both launcher motors are at the target voltage (within tolerance)
-    private boolean launcherAtVoltage(double targetVoltage, double tolerance) {
-        double leftApplied = LeftIntakeLauncher.getAppliedOutput() * NEO_MAX_VOLTAGE;
-        double rightApplied = RightIntakeLauncher.getAppliedOutput() * NEO_MAX_VOLTAGE;
-        return Math.abs(leftApplied - targetVoltage) <= tolerance && Math.abs(rightApplied - targetVoltage) <= tolerance;
-    }
-
-    // TODO: figure out the right rpm
-    public Command shootAtSpeedCommand() {
-        double launcherVoltage = LAUNCHING_LAUNCHER_PERCENT * NEO_MAX_VOLTAGE;
-        double voltageTolerance = 0.5; // volts, adjust as needed
-        return Commands.sequence(
-                    Commands.runOnce(() -> {
-                        setShooterVoltage(launcherVoltage);
-                    }, this),
-                    Commands.waitUntil(() -> launcherAtVoltage(launcherVoltage, voltageTolerance)),
-                    Commands.run(() -> setFeederRoller(INDEXER_LAUNCHING_PERCENT), this))
-                .finallyDo(interrupted -> stop())
-                .withName("ShootAtVoltage");
+        SmartDashboard.putNumber("Sim/Fuel/LeftRPM", leftIntakeLauncherEncoder.getVelocity());
+        SmartDashboard.putNumber("Sim/Fuel/RightRPM", rightIntakeLauncherEncoder.getVelocity());
+        SmartDashboard.putNumber("Sim/Fuel/IndexerPercent", Indexer.getAppliedOutput());
     }
 }

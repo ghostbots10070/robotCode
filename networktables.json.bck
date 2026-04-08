@@ -1,0 +1,42 @@
+[
+  {
+    "name": "/Preferences/ClimberMaxAngle",
+    "type": "double",
+    "value": 170.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ClimberMinAngle",
+    "type": "double",
+    "value": 11.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ClimberResetAngle",
+    "type": "double",
+    "value": 99.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ClimberPrepAngle",
+    "type": "double",
+    "value": 20.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ClimberL1ClimbAngle",
+    "type": "double",
+    "value": 99.0,
+    "properties": {
+      "persistent": true
+    }
+  }
+]

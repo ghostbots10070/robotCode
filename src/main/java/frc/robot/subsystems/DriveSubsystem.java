@@ -18,10 +18,8 @@ import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import com.studica.frc.AHRS;
-import com.studica.frc.AHRS.NavXComType;
+import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.wpilibj.SerialPort;
-
 
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.hal.SimDouble;
@@ -48,18 +46,23 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants.FieldConstants;
+import frc.robot.vision.VisionUpdate;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static frc.robot.Constants.DriveConstants.*;
 
-public class DriveSubsystem extends SubsystemBase {    
+import java.util.Optional;
+import java.util.function.Supplier;
+
+public class DriveSubsystem extends SubsystemBase {
     // SysID
     private final SysIdRoutine m_sysIdRoutine;
 
     // gyro
-    private AHRS m_gyro; // TODO: should be final once everything fixed
+    private final Pigeon2 m_gyro; // TODO: should be final once everything fixed
 
     // track robot field location for dashboard
     private boolean gyroZeroPending = true;
@@ -102,7 +105,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     // sim stuff
 
-    private final SimDouble SimGyroAngleHandler;
+    // private final SimDouble SimGyroAngleHandler;
 
     private final DCMotor m_leftGearbox;
     private final DCMotor m_rightGearbox;
@@ -116,10 +119,13 @@ public class DriveSubsystem extends SubsystemBase {
 
     private final Double kSimDt = 0.02; // 20 ms loop time
 
-    public DriveSubsystem() {
+    private final Supplier<Optional<VisionUpdate>> visionSupplier;
+
+    public DriveSubsystem(Supplier<Optional<VisionUpdate>> visionUpdateSupplier) {
+        
+        this.visionSupplier = visionUpdateSupplier;
+
         SmartDashboard.putBoolean("Closed Loop Mode", m_closedLoopMode);
-
-
 
         // Creates a SysIdRoutine
         m_sysIdRoutine = new SysIdRoutine(
@@ -127,11 +133,11 @@ public class DriveSubsystem extends SubsystemBase {
                 new SysIdRoutine.Mechanism((voltage) -> this.setVoltage(voltage, voltage), this::logMotors, this));
 
         // init gyro
-        m_gyro = new AHRS(NavXComType.kMXP_SPI);
-        //m_gyro =  new AHRS(SerialPort.Port.kUSB);
-        //SmartDashboard.putData("Gyro", m_gyro);
-        System.out.println("NavX connected after startup: " + m_gyro.isConnected());
-System.out.println("NavX yaw: " + m_gyro.getYaw());
+        m_gyro = new Pigeon2(PIGEON2_ID);
+
+        // SmartDashboard.putData("Gyro", m_gyro);
+        System.out.println("Pigeon2 connected after startup: " + m_gyro.isConnected());
+        System.out.println("Pigeon2 yaw: " + m_gyro.getYaw());
 
         // Configure Heading PID
         m_headingPID.enableContinuousInput(-180, 180);
@@ -184,8 +190,8 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
         m_rightSim = new SparkMaxSim(rightLeader, m_rightGearbox);
 
         // setup simulation for gyro
-        int gyroID = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]");
-        SimGyroAngleHandler = new SimDouble(SimDeviceDataJNI.getSimValueHandle(gyroID, "Yaw"));
+        // int gyroID = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]");
+        // SimGyroAngleHandler = new SimDouble(SimDeviceDataJNI.getSimValueHandle(gyroID, "Yaw"));
 
         m_driveTrainSim = new DifferentialDrivetrainSim(
                 // Create a linear system from our identification gains.
@@ -204,7 +210,7 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
                 // l and r velocity: 0.1 m/s
                 // l and r position: 0.005 m
                 null);
-                //VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
+        // VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
 
         // setup simulated encoders
         m_leftEncoderSim = new SparkRelativeEncoderSim(leftLeader);
@@ -232,7 +238,11 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
                 this);
 
         PathPlannerLogging.setLogActivePathCallback((poses) -> m_field.getObject("path").setPoses(poses));
+                resetPose(FieldConstants.START_IN_FRONT_OF_BLUE_HUB);
+
         SmartDashboard.putData("Field", m_field);
+
+        
     }
 
     private void setVoltage(Voltage rightVoltage, Voltage leftVoltage) {
@@ -296,10 +306,9 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
         return runOnce(
                 () -> {
                     m_speedMultiplier = percent;
-                    //System.out.println("Setting Max Speed to " + (percent * 100) + "%");
+                    // System.out.println("Setting Max Speed to " + (percent * 100) + "%");
                     SmartDashboard.putString("Speed Multiplier", (percent * 100) + "%");
-                }
-        );
+                });
     }
 
     public void toggleDirection() {
@@ -315,7 +324,6 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
     public void alignToAngle(double targetAngle) {
 
         double currentHeading = m_gyro.getRotation2d().getDegrees();
-
 
         double output = m_headingPID.calculate(currentHeading, targetAngle);
 
@@ -361,7 +369,7 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
         m_targetHeading = m_gyro.getRotation2d().getDegrees();
         // }
 
-        //SmartDashboard.putNumber("fwdSpeed", fwdSpeed);
+        // SmartDashboard.putNumber("fwdSpeed", fwdSpeed);
 
         if (m_closedLoopMode) {
             // Closed Loop: Positive finalRot turns CCW (Left)
@@ -411,11 +419,12 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
         final double positionTolerance = 0.01; // meters tolerance for considering we're at the setpoint
         return Commands.parallel(
                 Commands.run(
-                    () -> {
-                        movePosition(meters);
-                    }, this),
+                        () -> {
+                            movePosition(meters);
+                        }, this),
 
-                // Wait until the drivetrain left encoder has reached the setpoint within tolerance
+                // Wait until the drivetrain left encoder has reached the setpoint within
+                // tolerance
                 Commands.waitUntil(() -> Math.abs(m_encoderLeftLeader.getPosition() - meters) < positionTolerance));
     }
 
@@ -423,13 +432,12 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
         final double commandedSpeed = Math.copySign(Math.abs(speed), distanceMeters);
         final double[] start = new double[2];
         return runOnce(() -> {
-                    start[0] = m_encoderLeftLeader.getPosition();
-                    start[1] = m_encoderRightLeader.getPosition();
-                })
+            start[0] = m_encoderLeftLeader.getPosition();
+            start[1] = m_encoderRightLeader.getPosition();
+        })
                 .andThen(run(() -> m_diffDrive.arcadeDrive(commandedSpeed, 0, false)))
                 .until(() -> Math.max(Math.abs(m_encoderLeftLeader.getPosition() - start[0]),
-                                      Math.abs(m_encoderRightLeader.getPosition() - start[1]))
-                            >= Math.abs(distanceMeters))
+                        Math.abs(m_encoderRightLeader.getPosition() - start[1])) >= Math.abs(distanceMeters))
                 .finallyDo(interrupted -> m_diffDrive.stopMotor());
     }
 
@@ -484,28 +492,43 @@ System.out.println("NavX yaw: " + m_gyro.getYaw());
 
     private int m_loopCount = 1;
 
-@Override
-public void periodic() {
-    // Read gyro ONCE, reuse the result
-    Rotation2d currentRotation = m_gyro.getRotation2d();
+    @Override
+    public void periodic() {
+        // Read gyro ONCE, reuse the result
+        Rotation2d currentRotation = m_gyro.getRotation2d();
 
-    /*if (gyroZeroPending && !m_gyro.isCalibrating()) {
-        m_gyro.reset();
-        gyroZeroPending = false;
-    }*/
+        /*
+         * if (gyroZeroPending && !m_gyro.isCalibrating()) {
+         * m_gyro.reset();
+         * gyroZeroPending = false;
+         * }
+         */
 
-    m_driveOdometry.update(currentRotation,
-        m_encoderLeftLeader.getPosition(),
-        m_encoderRightLeader.getPosition());
-    m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
+        m_driveOdometry.update(currentRotation,
+                m_encoderLeftLeader.getPosition(),
+                m_encoderRightLeader.getPosition());
+        m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
 
-    // Only update dashboard every 5 loops (~100ms) — plenty fast for a human to read
-    if (m_loopCount++ % 5 == 0) {
-        SmartDashboard.putNumber("Gyro Heading", currentRotation.getDegrees());
-        SmartDashboard.putBoolean("Gyro Connected", m_gyro.isConnected());
-        postCords();
+        Optional<VisionUpdate> visionData = visionSupplier.get();
+        if (visionData.isPresent()) {
+            VisionUpdate data = visionData.get();
+
+            // Use the overloaded method that accepts your dynamic stdDevs!
+            m_driveOdometry.addVisionMeasurement(
+                    data.pose(),
+                    data.timestamp(),
+                    data.stdDevs() // <-- This makes the magic happen
+            );
+        }
+
+        // Only update dashboard every 5 loops (~100ms) — plenty fast for a human to
+        // read
+        if (m_loopCount++ % 5 == 0) {
+            SmartDashboard.putNumber("Gyro Heading", currentRotation.getDegrees());
+            SmartDashboard.putBoolean("Gyro Connected", m_gyro.isConnected());
+            postCords();
+        }
     }
-}
 
     @Override
     public void simulationPeriodic() {
@@ -552,16 +575,18 @@ public void periodic() {
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(m_driveTrainSim.getCurrentDrawAmps()));
         // update sensors
-        SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
+        // SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
         m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
         m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
         m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
         m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
 
-        /*m_driveOdometry.update(
-                m_driveTrainSim.getHeading(),
-                m_driveTrainSim.getLeftPositionMeters(),
-                m_driveTrainSim.getRightPositionMeters());*/
+        /*
+         * m_driveOdometry.update(
+         * m_driveTrainSim.getHeading(),
+         * m_driveTrainSim.getLeftPositionMeters(),
+         * m_driveTrainSim.getRightPositionMeters());
+         */
     }
 
     public Pose2d getPose() {

@@ -17,19 +17,19 @@ public class AutoRoutines {
         this.climberSubsystem = climberSubsystem;
     }
 
-    public Command basicAuto() {
-        return Commands.sequence(
-            new AutoDrive(drivetrain,0.10,  0.0).withTimeout(2),
-            new LaunchSequence(fuelSubsystem).withTimeout(10)
-        );
-    }
+    // public Command basicAuto() {
+    //     return Commands.sequence(
+    //         new AutoDrive(drivetrain,0.10,  0.0).withTimeout(2),
+    //         new LaunchSequence(fuelSubsystem).withTimeout(10)
+    //     );
+    // }
 
-    public Command encoderPositionAuto() {
-        return Commands.sequence(
-            drivetrain.movePositionCommand(1.5).withTimeout(10),
-            new LaunchSequence(fuelSubsystem).withTimeout(10)
-        );
-    }
+    // public Command encoderPositionAuto() {
+    //     return Commands.sequence(
+    //         drivetrain.movePositionCommand(1.5).withTimeout(10),
+    //         new LaunchSequence(fuelSubsystem).withTimeout(10)
+    //     );
+    // }
     public Command fullAuto() {
        return Commands.sequence(
             Commands.parallel(
