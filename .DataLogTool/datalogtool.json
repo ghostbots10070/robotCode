@@ -2,5 +2,8 @@
   "download": {
     "localDir": "C:\\Users\\Robotics\\Documents\\robotLogs",
     "serverTeam": "10070"
+  },
+  "output": {
+    "outputFolder": "C:\\Users\\Robotics\\Documents\\robotLogs"
   }
 }

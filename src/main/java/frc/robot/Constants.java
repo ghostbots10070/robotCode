@@ -3,6 +3,8 @@ package frc.robot;
 import com.pathplanner.lib.config.RobotConfig;
 import com.revrobotics.spark.ClosedLoopSlot;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.util.Units;
 
@@ -27,7 +29,8 @@ public final class Constants {
             try {
                 autoConfig = RobotConfig.fromGUISettings();
             } catch (Exception e) {
-                // Throw an actual exception so the robot doesn't silently boot with a broken auto config
+                // Throw an actual exception so the robot doesn't silently boot with a broken
+                // auto config
                 throw new RuntimeException("Failed to load PathPlanner RobotConfig from GUI settings!", e);
             }
         }
@@ -37,6 +40,8 @@ public final class Constants {
         public static final int LEFT_FOLLOWER_ID = 2;
         public static final int RIGHT_LEADER_ID = 3;
         public static final int RIGHT_FOLLOWER_ID = 4;
+
+        public static final int PIGEON2_ID = 9;
 
         // Current limit for drivetrain motors. 60A is a reasonable maximum to reduce
         // likelihood of tripping breakers or damaging CIM motors
@@ -117,9 +122,13 @@ public final class Constants {
         public static final double INTAKE_EJECT_PERCENT = -0.8;
 
         public static final double NEO_MAX_VOLTAGE = 12.0;
-        //public static final double LAUNCHING_LAUNCHER_VOLTAGE = NEO_
+        // public static final double LAUNCHING_LAUNCHER_VOLTAGE = NEO_
 
         public static final double SPIN_UP_SECONDS = 1;
+
+        // max of ~5300 - 5400 i think
+        public static final double LAUNCHING_LAUNCHER_RPM = 4000;   // tune this
+        public static final double LAUNCHING_RPM_TOLERANCE = 100;   // tune this (RPM)
     }
 
     public static final class ClimbConstants {
@@ -146,5 +155,80 @@ public final class Constants {
         // help avoid turning too fast and beign difficult to control
         public static final double DRIVE_SCALING = 0.9;
         public static final double ROTATION_SCALING = 0.7;
+    }
+
+    // https://github.com/RoboLancers/427-Rebuilt-2026/blob/main/src/main/java/frc/robot/Constants.java
+    // im gonna blindly trust these
+    public static class FieldConstants {
+
+        public static final Pose2d BLUE_HUB = new Pose2d(
+                Units.inchesToMeters(182.11),
+                Units.inchesToMeters(158.84),
+                Rotation2d.fromDegrees(180));
+        public static final double BLUE_HUB_X = BLUE_HUB.getX();
+        public static final double BLUE_HUB_Y = BLUE_HUB.getY();
+
+        public static final Pose2d BLUE_TOWER = new Pose2d(
+                Units.inchesToMeters(27.00), Units.inchesToMeters(147.47), Rotation2d.fromDegrees(180));
+        public static final double BLUE_TOWER_X = BLUE_TOWER.getX();
+        public static final double BLUE_TOWER_Y = BLUE_TOWER.getY();
+
+        public static final Pose2d BLUE_DEPOT = new Pose2d(
+                Units.inchesToMeters(13.5), Units.inchesToMeters(234.78), Rotation2d.fromDegrees(180));
+        public static final double BLUE_DEPOT_X = BLUE_DEPOT.getX();
+        public static final double BLUE_DEPOT_Y = BLUE_DEPOT.getY();
+
+        public static final Pose2d BLUE_CHUTE = new Pose2d(0, Units.inchesToMeters(26.22), Rotation2d.fromDegrees(180));
+        public static final double BLUE_CHUTE_X = BLUE_CHUTE.getX();
+        public static final double BLUE_CHUTE_Y = BLUE_CHUTE.getY();
+
+        public static final Pose2d RED_HUB = new Pose2d(
+                Units.inchesToMeters(469.11),
+                Units.inchesToMeters(158.84),
+                Rotation2d.fromDegrees(180));
+        public static final double RED_HUB_X = RED_HUB.getX();
+        public static final double RED_HUB_Y = RED_HUB.getY();
+
+        public static final Pose2d RED_TOWER = new Pose2d(
+                Units.inchesToMeters(635.72),
+                Units.inchesToMeters(170.22),
+                Rotation2d.fromDegrees(180));
+        public static final double RED_TOWER_X = RED_TOWER.getX();
+        public static final double RED_TOWER_Y = RED_TOWER.getY();
+
+        public static final Pose2d RED_DEPOT = new Pose2d(
+                Units.inchesToMeters(637.72), Units.inchesToMeters(82.84), Rotation2d.fromDegrees(180));
+        public static final double RED_DEPOT_X = RED_DEPOT.getX();
+        public static final double RED_DEPOT_Y = RED_DEPOT.getY();
+
+        public static final Pose2d RED_CHUTE = new Pose2d(
+                Units.inchesToMeters(651.22),
+                Units.inchesToMeters(291.47),
+                Rotation2d.fromDegrees(180));
+        public static final double RED_CHUTE_X = RED_CHUTE.getX();
+        public static final double RED_CHUTE_Y = RED_CHUTE.getY();
+
+        // The distance from the center of the Hub to the center of your robot
+        // when you are touching the fender/ring (tune this based on your bumpers!)
+        public static final double HUB_OFFSET_METERS = Units.inchesToMeters(37);
+
+        /**
+         * STARTING POSE: Right in front of the BLUE Hub.
+         * We subtract the offset from the Blue Hub X axis so we are closer to the Blue
+         * wall.
+         */
+        public static final Pose2d START_IN_FRONT_OF_BLUE_HUB = new Pose2d(
+                BLUE_HUB_X - HUB_OFFSET_METERS,
+                BLUE_HUB_Y,
+                Rotation2d.fromDegrees(180));
+
+        /**
+         * STARTING POSE: Right in front of the RED Hub.
+         * We add the offset to the Red Hub X axis so we are closer to the Red wall.
+         */
+        public static final Pose2d START_IN_FRONT_OF_RED_HUB = new Pose2d(
+                RED_HUB_X + HUB_OFFSET_METERS,
+                RED_HUB_Y,
+                Rotation2d.fromDegrees(0));
     }
 }

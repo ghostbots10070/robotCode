@@ -17,15 +17,14 @@ import frc.robot.commands.ArcadeDrive;
 import frc.robot.commands.AutoRoutines;
 import frc.robot.commands.Eject;
 import frc.robot.commands.Intake;
-import frc.robot.commands.LaunchSequence;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import static frc.robot.Constants.OperatorConstants.*;
 
 public class RobotContainer {
-
-    private final DriveSubsystem m_driveSubsystem = new DriveSubsystem();
     private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
+
+    private final DriveSubsystem m_driveSubsystem = new DriveSubsystem(m_cameraSubsystem::getLatestVisionData);
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
     private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
    
@@ -46,8 +45,8 @@ public class RobotContainer {
         autoChooser = AutoBuilder.buildAutoChooser();
 
         AutoRoutines routines = new AutoRoutines(m_driveSubsystem, m_fuelSubsystem, m_climberSubsystem);
-        autoChooser.setDefaultOption("Basic HH Auto", routines.basicAuto());
-        autoChooser.addOption("Encoder Position Auto", routines.encoderPositionAuto());
+        //autoChooser.setDefaultOption("Basic HH Auto", routines.basicAuto());
+        //autoChooser.addOption("Encoder Position Auto", routines.encoderPositionAuto());
         autoChooser.addOption("full auto", routines.fullAuto());
 
         SmartDashboard.putData("Auto Chooser", autoChooser);
@@ -56,7 +55,7 @@ public class RobotContainer {
 
         SmartDashboard.putString("Speed Multiplier", "100%");
 
-        NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
+        //NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
         SlewRateLimiter filter = new SlewRateLimiter(1);
         SlewRateLimiter filter3 = new SlewRateLimiter(0.5);
         m_driveSubsystem.setDefaultCommand(new ArcadeDrive(
@@ -127,7 +126,6 @@ public class RobotContainer {
 
         // Operator Controls
         m_operatorController.leftTrigger().whileTrue(new Intake(m_fuelSubsystem)); // gets ready to intake stuff
-        m_operatorController.rightBumper().whileTrue(new LaunchSequence(m_fuelSubsystem)); // launch balls
         m_operatorController.rightTrigger().whileTrue(m_fuelSubsystem.shootAtSpeedCommand());
         m_operatorController.x().whileTrue(new Eject(m_fuelSubsystem)); // eject balls out of the intake
         m_operatorController.povUp().whileTrue(m_climberSubsystem.climbUpCommand()); // climb up
