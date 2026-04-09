@@ -66,6 +66,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     // gyro
     private final Pigeon2 m_gyro; // TODO: should be final once everything fixed
+    private final Pigeon2SimState m_gyroSimState;
 
     // track robot field location for dashboard
     private boolean gyroZeroPending = true;
@@ -124,6 +125,10 @@ public class DriveSubsystem extends SubsystemBase {
 
     private final Supplier<Optional<VisionUpdate>> visionSupplier;
 
+    // Track continuous simulated heading to prevent Pigeon rollover drift
+    private Rotation2d m_lastSimHeading = new Rotation2d();
+    private double m_simContinuousHeading = 0.0;
+
     public DriveSubsystem(Supplier<Optional<VisionUpdate>> visionUpdateSupplier) {
 
         this.visionSupplier = visionUpdateSupplier;
@@ -137,9 +142,9 @@ public class DriveSubsystem extends SubsystemBase {
 
         // init gyro
         m_gyro = new Pigeon2(PIGEON2_ID);
-        Pigeon2SimState m_gyroSimState = m_gyro.getSimState(); // TODO: get working!!!
+        m_gyroSimState = m_gyro.getSimState(); // TODO resolved
 
-        // SmartDashboard.putData("Gyro", m_gyro);
+        SmartDashboard.putData("Gyro", m_gyro);
         System.out.println("Pigeon2 connected after startup: " + m_gyro.isConnected());
         System.out.println("Pigeon2 yaw: " + m_gyro.getYaw());
 
@@ -244,7 +249,6 @@ public class DriveSubsystem extends SubsystemBase {
         resetPose(FieldConstants.START_IN_FRONT_OF_BLUE_HUB);
 
         SmartDashboard.putData("Field", m_field);
-
     }
 
     private void setVoltage(Voltage rightVoltage, Voltage leftVoltage) {
@@ -272,13 +276,14 @@ public class DriveSubsystem extends SubsystemBase {
 
     public void resetPose(Pose2d pose) {
         resetEncoders();
-        // Reset drivetrain simulation state
-        // TODO: figure out if we actually neec to do this or it just messes up the
-        // whole thing
         m_driveTrainSim.setPose(pose);
-        // m_leftEncoderSim.setVelocity(0);
-        // m_rightEncoderSim.setVelocity(0);
-        // Reset odometry AFTER sim pose
+        
+        // Reset our continuous tracker to match the new pose
+        m_lastSimHeading = pose.getRotation();
+        m_simContinuousHeading = pose.getRotation().getDegrees();
+        
+        // Sync the Pigeon2 so its API yaw matches the new simulation heading
+        m_gyro.setYaw(pose.getRotation().getDegrees());
         m_driveOdometry.resetPosition(
                 pose.getRotation(),
                 0.0,
@@ -290,9 +295,6 @@ public class DriveSubsystem extends SubsystemBase {
         m_diffDrive.arcadeDrive(fwd, rot, false);
     }
 
-    /**
-     * Toggles between Open Loop (Voltage) and Closed Loop (Velocity PID) control
-     */
     public void toggleDriveMode() {
         m_closedLoopMode = !m_closedLoopMode;
         SmartDashboard.putBoolean("Closed Loop Mode", m_closedLoopMode);
@@ -477,32 +479,28 @@ public class DriveSubsystem extends SubsystemBase {
         return m_sysIdRoutine.dynamic(direction);
     }
 
+    /*
+     * We have to wrap the angles from 0 to 360 because the Pigeon2's yaw is configured to be continuous (-inf, inf)
+     * This takes in the value and normalizes it to [0, 360)
+     */
+    private double normalizedHeading(double angleDegrees) {
+        return MathUtil.inputModulus(angleDegrees, 0, 360);
+    }
+
     private void postCords() {
         Pose2d pose = m_driveOdometry.getEstimatedPosition();
 
         SmartDashboard.putNumber("Robot X", pose.getX());
         SmartDashboard.putNumber("Robot Y", pose.getY());
-        SmartDashboard.putNumber("Robot Rot", pose.getRotation().getDegrees());
+        SmartDashboard.putNumber("Robot Rot", normalizedHeading(pose.getRotation().getDegrees()));
     }
-
-    // public void updateVisionPose(Pose2d visionRobotPose, double timestamp, String
-    // cameraName, boolean cameraEnabled) {
-    // if (cameraEnabled) {
-    // m_driveOdometry.addVisionMeasurement(visionRobotPose, timestamp);
-    // }
-    // }
 
     private int m_loopCount = 1;
 
     @Override
     public void periodic() {
         // Read gyro ONCE, reuse the result
-        Rotation2d currentRotation;
-        if (RobotBase.isSimulation()) {
-            currentRotation = m_driveTrainSim.getHeading();
-        } else {
-            currentRotation = m_gyro.getRotation2d();
-        }
+        Rotation2d currentRotation = m_gyro.getRotation2d();
 
         /*
          * if (gyroZeroPending && !m_gyro.isCalibrating()) {
@@ -529,37 +527,16 @@ public class DriveSubsystem extends SubsystemBase {
             );
         }
 
-        // Only update dashboard every 5 loops (~100ms) — plenty fast for a human to
-        // read
+        // Only update dashboard every ~100ms
         if (m_loopCount++ % 5 == 0) {
-            SmartDashboard.putNumber("Gyro Heading", currentRotation.getDegrees());
-            SmartDashboard.putBoolean("Gyro Connected", m_gyro.isConnected());
             postCords();
         }
     }
 
     @Override
     public void simulationPeriodic() {
-        // SmartDashboard.putNumber("SimDebug/Left_AppliedOutput",
-        // m_leftSim.getAppliedOutput());
-        // SmartDashboard.putNumber("SimDebug/Right_AppliedOutput",
-        // m_rightSim.getAppliedOutput());
-
-        // // 2. Check Simulated Mechanism Velocities
-        // SmartDashboard.putNumber("SimDebug/Left_Sim_Velocity_MS",
-        // m_driveTrainSim.getLeftVelocityMetersPerSecond());
-        // SmartDashboard.putNumber("SimDebug/Right_Sim_Velocity_MS",
-        // m_driveTrainSim.getRightVelocityMetersPerSecond());
-
-        // // 3. Check Internal Motor Currents
-        // // (If these peg to 80A instantly, your simulated motors think they are
-        // stalled)
-        // SmartDashboard.putNumber("SimDebug/Left_Motor_Current",
-        // leftLeader.getOutputCurrent());
-        // SmartDashboard.putNumber("SimDebug/Right_Motor_Current",
-        // rightLeader.getOutputCurrent());
-
         // This method will be called once per scheduler run during simulation
+
         // link motors to simulation
         double batteryVoltage = RoboRioSim.getVInVoltage();
 
@@ -567,11 +544,6 @@ public class DriveSubsystem extends SubsystemBase {
                 m_leftSim.getAppliedOutput() * batteryVoltage,
                 m_rightSim.getAppliedOutput() * batteryVoltage);
 
-        // 1. Check Applied Outputs (Logical vs Physical Voltage)
-
-        // Advance the model by 20 ms. Note that if you are running this
-        // subsystem in a separate thread or have changed the nominal timestep
-        // of TimedRobot, this value needs to match it.
         m_driveTrainSim.update(kSimDt);
         // update spark maxes
         m_leftSim.iterate(
@@ -582,17 +554,21 @@ public class DriveSubsystem extends SubsystemBase {
         // add load to battery
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(m_driveTrainSim.getCurrentDrawAmps()));
+
+        // Calculate continuous unwrapped heading for the Pigeon
+        Rotation2d currentSimHeading = m_driveTrainSim.getHeading();
+        double deltaDegrees = currentSimHeading.minus(m_lastSimHeading).getDegrees(); // .minus() handles shortest-path boundary wrapping safely
+        m_simContinuousHeading += deltaDegrees;
+        m_lastSimHeading = currentSimHeading;
+
+        // update Pigeon2 simulated state
+        m_gyroSimState.setRawYaw(-m_simContinuousHeading);
+
         // update sensors
-        //SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
-        //System.out.println(m_driveTrainSim.getHeading().getDegrees());
         m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
         m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
         m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
         m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
-
-
-
-
     }
 
     public Pose2d getPose() {
