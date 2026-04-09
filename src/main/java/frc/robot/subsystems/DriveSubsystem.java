@@ -52,7 +52,6 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.vision.VisionUpdate;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static frc.robot.Constants.DriveConstants.*;
@@ -69,7 +68,6 @@ public class DriveSubsystem extends SubsystemBase {
     private final Pigeon2SimState m_gyroSimState;
 
     // track robot field location for dashboard
-    private boolean gyroZeroPending = true;
     private final Field2d m_field = new Field2d();
 
     private boolean m_closedLoopMode = true; // false = Open Loop, true = Velocity PID
@@ -77,9 +75,10 @@ public class DriveSubsystem extends SubsystemBase {
     private double m_speedMultiplier = 1.0;
     private boolean m_directionInverted = false;
 
+    private static final double SIM_DT_SECONDS = 0.02;
+
     // Heading Correction
     private final PIDController m_headingPID = new PIDController(0.02, 0, 0.001); // Tune kP (0.01 - 0.05)
-    private double m_targetHeading = 0.0;
 
     // motors
     private final SparkMax leftLeader = new SparkMax(LEFT_LEADER_ID, MotorType.kBrushless);
@@ -108,17 +107,13 @@ public class DriveSubsystem extends SubsystemBase {
             kaDriveVoltSecondsSquaredPerMeter);
 
     // sim stuff
-    private final DCMotor m_leftGearbox;
-    private final DCMotor m_rightGearbox;
-    private final SparkMaxSim m_leftSim;
-    private final SparkMaxSim m_rightSim;
+    private SparkMaxSim m_leftSim;
+    private SparkMaxSim m_rightSim;
 
-    private final DifferentialDrivetrainSim m_driveTrainSim;
+    private DifferentialDrivetrainSim m_driveTrainSim;
 
-    private final SparkRelativeEncoderSim m_leftEncoderSim;
-    private final SparkRelativeEncoderSim m_rightEncoderSim;
-
-    private final Double kSimDt = 0.02; // 20 ms loop time
+    private SparkRelativeEncoderSim m_leftEncoderSim;
+    private SparkRelativeEncoderSim m_rightEncoderSim;
 
     private final Supplier<Optional<VisionUpdate>> visionSupplier;
 
@@ -140,7 +135,7 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putData("Gyro", m_gyro);
 
         // Configure Heading PID
-        m_headingPID.enableContinuousInput(-180, 180);
+        m_headingPID.enableContinuousInput(0, 360);
         m_headingPID.setTolerance(1.0);
 
         // init motor
@@ -184,34 +179,33 @@ public class DriveSubsystem extends SubsystemBase {
                 m_encoderRightLeader.getPosition(),
                 new Pose2d());
 
-        m_leftGearbox = DCMotor.getNEO(2);
-        m_rightGearbox = DCMotor.getNEO(2);
-        m_leftSim = new SparkMaxSim(leftLeader, m_leftGearbox);
-        m_rightSim = new SparkMaxSim(rightLeader, m_rightGearbox);
+        if (RobotBase.isSimulation()) {
+            m_leftSim = new SparkMaxSim(leftLeader, DCMotor.getNEO(2));
+            m_rightSim = new SparkMaxSim(rightLeader, DCMotor.getNEO(2));
 
-        m_driveTrainSim = new DifferentialDrivetrainSim(
-                // Create a linear system from our identification gains.
-                LinearSystemId.identifyDrivetrainSystem(
-                        kvDriveVoltSecondsPerMeter,
-                        kaDriveVoltSecondsSquaredPerMeter,
-                        kvDriveVoltSecondsPerMeterAngular,
-                        kaDriveVoltSecondsSquaredPerMeterAngular),
-                DCMotor.getNEO(2), // 2 NEO motors on each side of the drivetrain.
-                GEAR_RATIO, // x to 1 gearing reduction
-                kTrackwidthMeters, // Track Width
-                WHEEL_RADIUS, // Wheel Radius
-                // The standard deviations for measurement noise:
-                // x and y: 0.001 m
-                // heading: 0.001 rad
-                // l and r velocity: 0.1 m/s
-                // l and r position: 0.005 m
-                null);
-        // VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
+            m_driveTrainSim = new DifferentialDrivetrainSim(
+                    // Create a linear system from our identification gains.
+                    LinearSystemId.identifyDrivetrainSystem(
+                            kvDriveVoltSecondsPerMeter,
+                            kaDriveVoltSecondsSquaredPerMeter,
+                            kvDriveVoltSecondsPerMeterAngular,
+                            kaDriveVoltSecondsSquaredPerMeterAngular),
+                    DCMotor.getNEO(2), // 2 NEO motors on each side of the drivetrain.
+                    GEAR_RATIO, // x to 1 gearing reduction
+                    kTrackwidthMeters, // Track Width
+                    WHEEL_RADIUS, // Wheel Radius
+                    // The standard deviations for measurement noise:
+                    // x and y: 0.001 m
+                    // heading: 0.001 rad
+                    // l and r velocity: 0.1 m/s
+                    // l and r position: 0.005 m
+                    null);
+            // VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
 
-        // setup simulated encoders
-        m_leftEncoderSim = new SparkRelativeEncoderSim(leftLeader);
-        m_rightEncoderSim = new SparkRelativeEncoderSim(rightLeader);
-
+            // setup simulated encoders
+            m_leftEncoderSim = new SparkRelativeEncoderSim(leftLeader);
+            m_rightEncoderSim = new SparkRelativeEncoderSim(rightLeader);
+        }
         // Configure AutoBuilder
         AutoBuilder.configure(
                 // getPose
@@ -240,7 +234,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     }
 
-    private void setVoltage(Voltage rightVoltage, Voltage leftVoltage) {
+    private void setVoltage(Voltage leftVoltage, Voltage rightVoltage) {
         leftLeader.setVoltage(leftVoltage.in(Volts));
         rightLeader.setVoltage(rightVoltage.in(Volts));
         m_diffDrive.feed();
@@ -265,13 +259,10 @@ public class DriveSubsystem extends SubsystemBase {
 
     public void resetPose(Pose2d pose) {
         resetEncoders();
-        // Reset drivetrain simulation state
-        // TODO: figure out if we actually neec to do this or it just messes up the
-        // whole thing
-        m_driveTrainSim.setPose(pose);
-        // m_leftEncoderSim.setVelocity(0);
-        // m_rightEncoderSim.setVelocity(0);
-        // Reset odometry AFTER sim pose
+        if (RobotBase.isSimulation() && m_driveTrainSim != null) {
+            m_driveTrainSim.setPose(pose);
+        }
+
         m_driveOdometry.resetPosition(
                 pose.getRotation(),
                 0.0,
@@ -308,27 +299,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     public void toggleDirection() {
         m_directionInverted = !m_directionInverted;
-        // if (m_directionInverted){
-        // m_targetHeading = 180;
-        // } else{
-        // m_targetHeading = 0;
-        // }
         SmartDashboard.putBoolean("Inverted Direction", m_directionInverted);
-    }
-
-    public void alignToAngle(double targetAngle) {
-
-        double currentHeading = m_gyro.getRotation2d().getDegrees();
-
-        double output = m_headingPID.calculate(currentHeading, targetAngle);
-
-        output = MathUtil.clamp(output, -0.6, 0.6);
-
-        m_diffDrive.arcadeDrive(0.0, output);
-    }
-
-    public boolean isAligned() {
-        return m_headingPID.atSetpoint();
     }
 
     /**
@@ -348,31 +319,13 @@ public class DriveSubsystem extends SubsystemBase {
             fwdSpeed *= -1;
         }
 
-        double finalRot = rotSpeed;
-
-        // Only attempt stabilization if moving forward but not commanding a turn
-        // if (Math.abs(rotSpeed) < 0.05 && Math.abs(fwdSpeed) > 0.05) {
-        // if (Math.abs(m_gyro.getRate()) < 2.0) {
-        // // Calculate correction (Positive output means we need to turn Left/CCW)
-        // double correction =
-        // m_headingPID.calculate(m_gyro.getRotation2d().getDegrees(), m_targetHeading);
-        // finalRot = MathUtil.clamp(correction, -0.3, 0.3);
-        // } else {
-        // m_targetHeading = m_gyro.getRotation2d().getDegrees();
-        // }
-        // } else {
-        m_targetHeading = m_gyro.getRotation2d().getDegrees();
-        // }
-
-        // SmartDashboard.putNumber("fwdSpeed", fwdSpeed);
-
         if (m_closedLoopMode) {
             // Closed Loop: Positive finalRot turns CCW (Left)
-            driveVelocity(fwdSpeed, finalRot);
+            driveVelocity(fwdSpeed, rotSpeed);
             m_diffDrive.feed();
         } else {
             // Open Loop: arcadeDrive expects positive to be CW (Right).
-            m_diffDrive.arcadeDrive(fwdSpeed, finalRot, false);
+            m_diffDrive.arcadeDrive(fwdSpeed, rotSpeed, false);
         }
     }
 
@@ -397,32 +350,6 @@ public class DriveSubsystem extends SubsystemBase {
         setWheelVelocities(wheelSpeeds);
     }
 
-    private void movePosition(double meters) {
-        // Set target position for both sides
-        m_leftLeaderPIDController.setSetpoint(
-                meters,
-                SparkBase.ControlType.kPosition,
-                kDrivetrainPositionPIDSlot);
-
-        m_rightLeaderPIDController.setSetpoint(
-                meters,
-                SparkBase.ControlType.kPosition,
-                kDrivetrainPositionPIDSlot);
-    }
-
-    public Command movePositionCommand(double meters) {
-        final double positionTolerance = 0.01; // meters tolerance for considering we're at the setpoint
-        return Commands.parallel(
-                Commands.run(
-                        () -> {
-                            movePosition(meters);
-                        }, this),
-
-                // Wait until the drivetrain left encoder has reached the setpoint within
-                // tolerance
-                Commands.waitUntil(() -> Math.abs(m_encoderLeftLeader.getPosition() - meters) < positionTolerance));
-    }
-
     public Command driveDistanceCommand(double distanceMeters, double speed) {
         final double commandedSpeed = Math.copySign(Math.abs(speed), distanceMeters);
         final double[] start = new double[2];
@@ -439,6 +366,10 @@ public class DriveSubsystem extends SubsystemBase {
     private void resetEncoders() {
         m_encoderLeftLeader.setPosition(0);
         m_encoderRightLeader.setPosition(0);
+        if (RobotBase.isSimulation() && m_leftEncoderSim != null && m_rightEncoderSim != null) {
+            m_leftEncoderSim.setPosition(0);
+            m_rightEncoderSim.setPosition(0);
+        }
     }
 
     private void setWheelVelocities(DifferentialDriveWheelSpeeds speeds) {
@@ -474,8 +405,7 @@ public class DriveSubsystem extends SubsystemBase {
         return MathUtil.inputModulus(degrees, 0, 360);
     }
 
-
-    private void postCords() {
+    private void postCoords() {
         Pose2d pose = m_driveOdometry.getEstimatedPosition();
 
         SmartDashboard.putNumber("Robot X", pose.getX());
@@ -483,18 +413,14 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Robot Rot", normalizeHeading(pose.getRotation().getDegrees()));
     }
 
-    // public void updateVisionPose(Pose2d visionRobotPose, double timestamp, String
-    // cameraName, boolean cameraEnabled) {
-    // if (cameraEnabled) {
-    // m_driveOdometry.addVisionMeasurement(visionRobotPose, timestamp);
-    // }
-    // }
-
-    private int m_loopCount = 1;
+    private int m_loopCount = 0;
 
     @Override
     public void periodic() {
-        // Read gyro ONCE, reuse the result
+        // so genuinely no clue what's happening, but there's a weird inversion
+        // somewhere I can't figure out
+        // so for right now we'll just read from the drivetrainsim id
+        // TODO: fix
         Rotation2d currentRotation;
         if (RobotBase.isSimulation()) {
             currentRotation = m_driveTrainSim.getHeading();
@@ -502,97 +428,55 @@ public class DriveSubsystem extends SubsystemBase {
             currentRotation = m_gyro.getRotation2d();
         }
 
-        /*
-         * if (gyroZeroPending && !m_gyro.isCalibrating()) {
-         * m_gyro.reset();
-         * gyroZeroPending = false;
-         * }
-         */
-
         m_driveOdometry.update(currentRotation,
                 m_encoderLeftLeader.getPosition(),
                 m_encoderRightLeader.getPosition());
         m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
-        //System.out.println("field2d rotation: " + m_field.getRobotPose().getRotation().getDegrees());
 
-        Optional<VisionUpdate> visionData = visionSupplier.get();
-        if (visionData.isPresent()) {
-            VisionUpdate data = visionData.get();
-
-            // Use the overloaded method that accepts your dynamic stdDevs!
+        visionSupplier.get().ifPresent(data ->
             m_driveOdometry.addVisionMeasurement(
-                    data.pose(),
-                    data.timestamp(),
-                    data.stdDevs() // <-- This makes the magic happen
-            );
-        }
+                data.pose(),
+                data.timestamp(),
+                data.stdDevs()
+            )
+        );
 
-        // Only update dashboard every 5 loops (~100ms) — plenty fast for a human to
-        // read
+        // Only update dashboard every 100ms
         if (m_loopCount++ % 5 == 0) {
-            SmartDashboard.putNumber("Gyro Heading", currentRotation.getDegrees());
-            SmartDashboard.putBoolean("Gyro Connected", m_gyro.isConnected());
-            postCords();
+            postCoords();
         }
     }
 
     @Override
     public void simulationPeriodic() {
-        // SmartDashboard.putNumber("SimDebug/Left_AppliedOutput",
-        // m_leftSim.getAppliedOutput());
-        // SmartDashboard.putNumber("SimDebug/Right_AppliedOutput",
-        // m_rightSim.getAppliedOutput());
-
-        // // 2. Check Simulated Mechanism Velocities
-        // SmartDashboard.putNumber("SimDebug/Left_Sim_Velocity_MS",
-        // m_driveTrainSim.getLeftVelocityMetersPerSecond());
-        // SmartDashboard.putNumber("SimDebug/Right_Sim_Velocity_MS",
-        // m_driveTrainSim.getRightVelocityMetersPerSecond());
-
-        // // 3. Check Internal Motor Currents
-        // // (If these peg to 80A instantly, your simulated motors think they are
-        // stalled)
-        // SmartDashboard.putNumber("SimDebug/Left_Motor_Current",
-        // leftLeader.getOutputCurrent());
-        // SmartDashboard.putNumber("SimDebug/Right_Motor_Current",
-        // rightLeader.getOutputCurrent());
-
         // This method will be called once per scheduler run during simulation
-        // link motors to simulation
+
         double batteryVoltage = RoboRioSim.getVInVoltage();
 
         m_driveTrainSim.setInputs(
                 m_leftSim.getAppliedOutput() * batteryVoltage,
                 m_rightSim.getAppliedOutput() * batteryVoltage);
 
-        // 1. Check Applied Outputs (Logical vs Physical Voltage)
+        // move sim along
+        m_driveTrainSim.update(SIM_DT_SECONDS);
 
-        // Advance the model by 20 ms. Note that if you are running this
-        // subsystem in a separate thread or have changed the nominal timestep
-        // of TimedRobot, this value needs to match it.
-        m_driveTrainSim.update(kSimDt);
-        // update spark maxes
         m_leftSim.iterate(
-                m_driveTrainSim.getLeftVelocityMetersPerSecond(), batteryVoltage, kSimDt);
+                m_driveTrainSim.getLeftVelocityMetersPerSecond(), batteryVoltage, SIM_DT_SECONDS);
         m_rightSim.iterate(
-                m_driveTrainSim.getRightVelocityMetersPerSecond(), batteryVoltage, kSimDt);
+                m_driveTrainSim.getRightVelocityMetersPerSecond(), batteryVoltage, SIM_DT_SECONDS);
 
         // add load to battery
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(m_driveTrainSim.getCurrentDrawAmps()));
+
         // update sensors
         m_gyroSimState.setSupplyVoltage(RoboRioSim.getVInVoltage());
         m_gyroSimState.setRawYaw(-m_driveTrainSim.getHeading().getDegrees());
-
 
         m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
         m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
         m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
         m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
-
-
-
-
     }
 
     public Pose2d getPose() {
