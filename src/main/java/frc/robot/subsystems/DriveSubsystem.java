@@ -19,6 +19,8 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.ctre.phoenix6.hardware.Pigeon2;
+import com.ctre.phoenix6.sim.Pigeon2SimState;
+
 import edu.wpi.first.wpilibj.SerialPort;
 
 import edu.wpi.first.epilogue.Logged;
@@ -37,6 +39,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
@@ -105,7 +108,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     // sim stuff
 
-    // private final SimDouble SimGyroAngleHandler;
+    private final SimDouble SimGyroAngleHandler;
 
     private final DCMotor m_leftGearbox;
     private final DCMotor m_rightGearbox;
@@ -122,7 +125,7 @@ public class DriveSubsystem extends SubsystemBase {
     private final Supplier<Optional<VisionUpdate>> visionSupplier;
 
     public DriveSubsystem(Supplier<Optional<VisionUpdate>> visionUpdateSupplier) {
-        
+
         this.visionSupplier = visionUpdateSupplier;
 
         SmartDashboard.putBoolean("Closed Loop Mode", m_closedLoopMode);
@@ -134,6 +137,7 @@ public class DriveSubsystem extends SubsystemBase {
 
         // init gyro
         m_gyro = new Pigeon2(PIGEON2_ID);
+        Pigeon2SimState m_gyroSimState = m_gyro.getSimState(); // TODO: get working!!!
 
         // SmartDashboard.putData("Gyro", m_gyro);
         System.out.println("Pigeon2 connected after startup: " + m_gyro.isConnected());
@@ -189,9 +193,8 @@ public class DriveSubsystem extends SubsystemBase {
         m_leftSim = new SparkMaxSim(leftLeader, m_leftGearbox);
         m_rightSim = new SparkMaxSim(rightLeader, m_rightGearbox);
 
-        // setup simulation for gyro
-        // int gyroID = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]");
-        // SimGyroAngleHandler = new SimDouble(SimDeviceDataJNI.getSimValueHandle(gyroID, "Yaw"));
+        int gyroID = SimDeviceDataJNI.getSimDeviceHandle("navX-Sensor[4]");
+        SimGyroAngleHandler = new SimDouble(SimDeviceDataJNI.getSimValueHandle(gyroID, "Yaw"));
 
         m_driveTrainSim = new DifferentialDrivetrainSim(
                 // Create a linear system from our identification gains.
@@ -238,11 +241,10 @@ public class DriveSubsystem extends SubsystemBase {
                 this);
 
         PathPlannerLogging.setLogActivePathCallback((poses) -> m_field.getObject("path").setPoses(poses));
-                resetPose(FieldConstants.START_IN_FRONT_OF_BLUE_HUB);
+        resetPose(FieldConstants.START_IN_FRONT_OF_BLUE_HUB);
 
         SmartDashboard.putData("Field", m_field);
 
-        
     }
 
     private void setVoltage(Voltage rightVoltage, Voltage leftVoltage) {
@@ -495,7 +497,12 @@ public class DriveSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         // Read gyro ONCE, reuse the result
-        Rotation2d currentRotation = m_gyro.getRotation2d();
+        Rotation2d currentRotation;
+        if (RobotBase.isSimulation()) {
+            currentRotation = m_driveTrainSim.getHeading();
+        } else {
+            currentRotation = m_gyro.getRotation2d();
+        }
 
         /*
          * if (gyroZeroPending && !m_gyro.isCalibrating()) {
@@ -508,6 +515,7 @@ public class DriveSubsystem extends SubsystemBase {
                 m_encoderLeftLeader.getPosition(),
                 m_encoderRightLeader.getPosition());
         m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
+        //System.out.println("field2d rotation: " + m_field.getRobotPose().getRotation().getDegrees());
 
         Optional<VisionUpdate> visionData = visionSupplier.get();
         if (visionData.isPresent()) {
@@ -575,18 +583,16 @@ public class DriveSubsystem extends SubsystemBase {
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(m_driveTrainSim.getCurrentDrawAmps()));
         // update sensors
-        // SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
+        //SimGyroAngleHandler.set(-m_driveTrainSim.getHeading().getDegrees());
+        //System.out.println(m_driveTrainSim.getHeading().getDegrees());
         m_leftEncoderSim.setPosition(m_driveTrainSim.getLeftPositionMeters());
         m_leftEncoderSim.setVelocity(m_driveTrainSim.getLeftVelocityMetersPerSecond());
         m_rightEncoderSim.setPosition(m_driveTrainSim.getRightPositionMeters());
         m_rightEncoderSim.setVelocity(m_driveTrainSim.getRightVelocityMetersPerSecond());
 
-        /*
-         * m_driveOdometry.update(
-         * m_driveTrainSim.getHeading(),
-         * m_driveTrainSim.getLeftPositionMeters(),
-         * m_driveTrainSim.getRightPositionMeters());
-         */
+
+
+
     }
 
     public Pose2d getPose() {
