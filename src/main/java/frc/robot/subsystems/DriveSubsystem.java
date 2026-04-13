@@ -48,6 +48,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.ProxyCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.FieldConstants;
@@ -124,7 +125,8 @@ public class DriveSubsystem extends SubsystemBase {
         // init motor
 
         SparkMaxConfig baseDriveConfig = new SparkMaxConfig();
-        // Hold drive response more constant as battery sags so FF/PID tuning stays valid all match.
+        // Hold drive response more constant as battery sags so FF/PID tuning stays
+        // valid all match.
         baseDriveConfig.voltageCompensation(12.0);
 
         baseDriveConfig.encoder
@@ -147,7 +149,8 @@ public class DriveSubsystem extends SubsystemBase {
         leftFollower.configure(new SparkMaxConfig().apply(baseDriveConfig).follow(leftLeader),
                 ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 
-        // inverted so that positive voltage results in forward motion for both sides with standard wiring
+        // inverted so that positive voltage results in forward motion for both sides
+        // with standard wiring
         rightLeader.configure(new SparkMaxConfig().apply(baseDriveConfig).inverted(true),
                 ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 
@@ -213,7 +216,6 @@ public class DriveSubsystem extends SubsystemBase {
                 this);
 
         PathPlannerLogging.setLogActivePathCallback((poses) -> m_field.getObject("path").setPoses(poses));
-        resetPose(FieldConstants.START_IN_FRONT_OF_BLUE_HUB);
 
         SmartDashboard.putData("Field", m_field);
 
@@ -311,7 +313,7 @@ public class DriveSubsystem extends SubsystemBase {
     /**
      * Helper to convert normalized inputs to closed-loop velocity targets.
      *
-     * @param xSpeed normalized linear command [-1..1], scaled to meters/second
+     * @param xSpeed    normalized linear command [-1..1], scaled to meters/second
      * @param zRotation normalized angular command [-1..1], scaled to radians/second
      */
     private void driveVelocity(double xSpeed, double zRotation) {
@@ -335,8 +337,10 @@ public class DriveSubsystem extends SubsystemBase {
      * Drives straight for a target distance.
      *
      * @param distanceMeters target travel distance in meters (sign sets direction)
-     * @param speed normalized open-loop forward command [0..1] before sign is applied
-     * @return command that runs until measured wheel travel reaches {@code distanceMeters}
+     * @param speed          normalized open-loop forward command [0..1] before sign
+     *                       is applied
+     * @return command that runs until measured wheel travel reaches
+     *         {@code distanceMeters}
      */
     public Command driveDistanceCommand(double distanceMeters, double speed) {
         final double commandedSpeed = Math.copySign(Math.abs(speed), distanceMeters);
@@ -352,34 +356,64 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     /**
-     * Rotates the robot to a target heading using a motion-profiled heading PID and wheel velocity control.
+     * Rotates the robot to a target heading using a motion-profiled heading PID and
+     * wheel velocity control.
      *
      * @param targetDegrees desired field-relative heading in degrees (0..360)
-     * @param maxTurnSpeed normalized turn limit [0..1], scaled to
-     *        {@code kMaxAngularSpeedRadiansPerSecond}
+     * @param maxTurnSpeed  normalized turn limit [0..1], scaled to
+     *                      {@code kMaxAngularSpeedRadiansPerSecond}
      * @return command that ends when heading controller reaches goal
      */
     public Command turnToAngleCommand(double targetDegrees, double maxTurnSpeed) {
-        final double normalizedTargetDeg = normalizeHeading(targetDegrees);
         final double limitedMaxTurn = MathUtil.clamp(Math.abs(maxTurnSpeed), 0.0, 1.0);
 
         return runOnce(() -> {
-            double currentDeg = normalizeHeading(m_gyro.getRotation2d().getDegrees());
+            double currentDeg = getHeading();
+            System.out
+                    .println("[turnToAngleCommand] Starting turn: current=" + currentDeg + " target=" + targetDegrees);
             m_headingPID.reset(currentDeg);
-            m_headingPID.setGoal(normalizedTargetDeg);
+            m_headingPID.setGoal(targetDegrees);
         }).andThen(run(() -> {
-            double currentDeg = normalizeHeading(m_gyro.getRotation2d().getDegrees());
+            double currentDeg = getHeading();
             double turnCommand = m_headingPID.calculate(currentDeg);
             turnCommand = MathUtil.clamp(turnCommand, -limitedMaxTurn, limitedMaxTurn);
 
             // Invert to match current gyro/drive sign convention.
             driveVelocity(0.0, -turnCommand);
             m_diffDrive.feed();
+            // System.out.println("[turnToAngleCommand] Running: current=" + currentDeg + "
+            // turnCmd=" + turnCommand);
         }).until(m_headingPID::atGoal)
                 .finallyDo(interrupted -> {
                     setWheelVelocities(new DifferentialDriveWheelSpeeds(0.0, 0.0));
                     m_diffDrive.stopMotor();
+                    System.out.println("[turnToAngleCommand] Finished");
                 }));
+    }
+
+    public Command turnToHubCommand() {
+        return new ProxyCommand(() -> {
+            Pose2d currentPose = getPose();
+
+            // Determine alliance and select the correct hub pose
+            Pose2d hubPose = FieldConstants.BLUE_HUB;
+            var alliance = DriverStation.getAlliance();
+            if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
+                hubPose = FieldConstants.RED_HUB;
+            }
+
+            // Compute the distance in X and Y from the robot to the hub
+            double dx = hubPose.getX() - currentPose.getX();
+            double dy = hubPose.getY() - currentPose.getY();
+
+            // now, in order to shoot, we want the "back" of the robot facing the hub
+            double targetHeading = Math.toDegrees(Math.atan2(dy, dx)) - 180;
+
+            System.out.println("[turnToHubCommand] Current heading: " + getHeading() +
+                    ", target heading: " + targetHeading);
+
+            return turnToAngleCommand(targetHeading, 0.3);
+        });
     }
 
     private void setWheelVelocities(DifferentialDriveWheelSpeeds speeds) {
@@ -438,32 +472,23 @@ public class DriveSubsystem extends SubsystemBase {
         m_gyro.reset();
     }
 
-    // helpers
-    private double normalizeHeading(double degrees) {
-        return MathUtil.inputModulus(degrees, 0, 360);
+    public double getHeading() {
+        return m_gyro.getRotation2d().getDegrees();
     }
 
+    // helpers
     private void postCoords() {
         Pose2d pose = m_driveOdometry.getEstimatedPosition();
 
         SmartDashboard.putNumber("Robot X", pose.getX());
         SmartDashboard.putNumber("Robot Y", pose.getY());
-        SmartDashboard.putNumber("Robot Rot", normalizeHeading(pose.getRotation().getDegrees()));
+        SmartDashboard.putNumber("Robot Rot", getHeading());
     }
 
     // lifecycle
     @Override
     public void periodic() {
-        // so genuinely no clue what's happening, but there's a weird inversion
-        // somewhere I can't figure out
-        // so for right now we'll just read from the drivetrainsim id
-        // TODO: fix
-        Rotation2d currentRotation;
-        if (RobotBase.isSimulation()) {
-            currentRotation = m_driveTrainSim.getHeading();
-        } else {
-            currentRotation = m_gyro.getRotation2d();
-        }
+        Rotation2d currentRotation = m_gyro.getRotation2d();
 
         m_driveOdometry.update(currentRotation,
                 m_encoderLeftLeader.getPosition(),
@@ -471,7 +496,8 @@ public class DriveSubsystem extends SubsystemBase {
         m_field.setRobotPose(m_driveOdometry.getEstimatedPosition());
 
         visionSupplier.get().ifPresent(data -> m_driveOdometry.addVisionMeasurement(
-                // Vision periodically re-anchors global pose to bound long-run wheel slip drift.
+                // Vision periodically re-anchors global pose to bound long-run wheel slip
+                // drift.
                 data.pose(),
                 data.timestamp(),
                 data.stdDevs()));

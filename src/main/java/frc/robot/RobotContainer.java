@@ -25,7 +25,7 @@ import static frc.robot.Constants.OperatorConstants.*;
 public class RobotContainer {
     private final CameraSubsystem m_cameraSubsystem = new CameraSubsystem();
 
-    private final DriveSubsystem m_driveSubsystem = new DriveSubsystem(m_cameraSubsystem::getLatestVisionData);
+    public final DriveSubsystem m_driveSubsystem = new DriveSubsystem(m_cameraSubsystem::getLatestVisionData);
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
     private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
    
@@ -100,6 +100,10 @@ public class RobotContainer {
                 double maxTurn = SmartDashboard.getNumber("TurnToAngle/MaxTurnSpeed", 0.2);
                 m_driveSubsystem.turnToAngleCommand(targetDeg, maxTurn).schedule();
             }));
+
+        SmartDashboard.putData(
+            "Commands/Turn To Hub (dashboard)",
+            Commands.runOnce(() -> m_driveSubsystem.turnToHubCommand().schedule()));
     }
 
     public Command getAutonomousCommand() {
@@ -114,6 +118,10 @@ public class RobotContainer {
         m_driverController.start().onTrue(Commands.runOnce(m_driveSubsystem::toggleDriveMode, m_driveSubsystem));
         m_driverController.leftBumper().onTrue(Commands.runOnce(m_driveSubsystem::toggleHalfSpeed, m_driveSubsystem));
         m_driverController.back().onTrue(Commands.runOnce(m_driveSubsystem::toggleDirection, m_driveSubsystem));
+
+        m_driverController.leftTrigger().onTrue(Commands.runOnce(() -> m_driveSubsystem.turnToHubCommand().schedule()));
+        m_driverController.rightTrigger().onTrue(Commands.runOnce(m_driveSubsystem::resetGyro, m_driveSubsystem));
+
 
         m_driverController.a()
             .and(m_driverController.rightBumper().negate())
