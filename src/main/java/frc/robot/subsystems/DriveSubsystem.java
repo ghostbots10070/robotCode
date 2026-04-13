@@ -25,7 +25,7 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.estimator.DifferentialDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -34,6 +34,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -82,7 +83,11 @@ public class DriveSubsystem extends SubsystemBase {
     private final DifferentialDrive m_diffDrive = new DifferentialDrive(leftLeader, rightLeader);
 
     // ===== Control / estimation =====
-    private final PIDController m_headingPID = new PIDController(0.02, 0, 0.001);
+    private final ProfiledPIDController m_headingPID = new ProfiledPIDController(
+            0.02, 0, 0.001,
+            new TrapezoidProfile.Constraints(
+                    Math.toDegrees(kMaxAngularSpeedRadiansPerSecond),
+                    Math.toDegrees(kMaxAngularSpeedRadiansPerSecond) * 2.0));
     private final SimpleMotorFeedforward m_driveFeedForward = new SimpleMotorFeedforward(ksDriveVolts,
             kvDriveVoltSecondsPerMeter, kaDriveVoltSecondsSquaredPerMeter);
     private final DifferentialDrivePoseEstimator m_driveOdometry;
@@ -112,9 +117,9 @@ public class DriveSubsystem extends SubsystemBase {
 
         SmartDashboard.putData("Gyro", m_gyro);
 
-        // Configure Heading PID
-        m_headingPID.enableContinuousInput(0, 360);
-        m_headingPID.setTolerance(1.0);
+        // Configure Heading PID (motion profiled, 0..360 continuous)
+        m_headingPID.enableContinuousInput(0.0, 360.0);
+        m_headingPID.setTolerance(1.5, 8.0);
 
         // init motor
 
@@ -180,7 +185,7 @@ public class DriveSubsystem extends SubsystemBase {
                     // l and r velocity: 0.1 m/s
                     // l and r position: 0.005 m
                     null);
-            // VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
+            // VecBuilder.fill(0.001, 0.001, 0.1, 0.1, 0.005, 0.005));
 
             // setup simulated encoders
             m_leftEncoderSim = new SparkRelativeEncoderSim(leftLeader);
@@ -261,6 +266,12 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Slow Mode", m_halfSpeedMode);
     }
 
+    /**
+     * Sets a global speed scale for driver commands.
+     *
+     * @param percent unitless scale factor (1.0 = 100%, 0.5 = 50%)
+     * @return command that applies the multiplier once
+     */
     public Command setMaxSpeed(double percent) {
         return runOnce(
                 () -> {
@@ -298,7 +309,10 @@ public class DriveSubsystem extends SubsystemBase {
     }
 
     /**
-     * Helper to convert Joystick inputs to Closed-Loop Velocity commands
+     * Helper to convert normalized inputs to closed-loop velocity targets.
+     *
+     * @param xSpeed normalized linear command [-1..1], scaled to meters/second
+     * @param zRotation normalized angular command [-1..1], scaled to radians/second
      */
     private void driveVelocity(double xSpeed, double zRotation) {
         // Convert inputs (-1 to 1) to m/s and rad/s
@@ -317,6 +331,13 @@ public class DriveSubsystem extends SubsystemBase {
         setWheelVelocities(wheelSpeeds);
     }
 
+    /**
+     * Drives straight for a target distance.
+     *
+     * @param distanceMeters target travel distance in meters (sign sets direction)
+     * @param speed normalized open-loop forward command [0..1] before sign is applied
+     * @return command that runs until measured wheel travel reaches {@code distanceMeters}
+     */
     public Command driveDistanceCommand(double distanceMeters, double speed) {
         final double commandedSpeed = Math.copySign(Math.abs(speed), distanceMeters);
         final double[] start = new double[2];
@@ -328,6 +349,37 @@ public class DriveSubsystem extends SubsystemBase {
                 .until(() -> Math.max(Math.abs(m_encoderLeftLeader.getPosition() - start[0]),
                         Math.abs(m_encoderRightLeader.getPosition() - start[1])) >= Math.abs(distanceMeters))
                 .finallyDo(interrupted -> m_diffDrive.stopMotor());
+    }
+
+    /**
+     * Rotates the robot to a target heading using a motion-profiled heading PID and wheel velocity control.
+     *
+     * @param targetDegrees desired field-relative heading in degrees (0..360)
+     * @param maxTurnSpeed normalized turn limit [0..1], scaled to
+     *        {@code kMaxAngularSpeedRadiansPerSecond}
+     * @return command that ends when heading controller reaches goal
+     */
+    public Command turnToAngleCommand(double targetDegrees, double maxTurnSpeed) {
+        final double normalizedTargetDeg = normalizeHeading(targetDegrees);
+        final double limitedMaxTurn = MathUtil.clamp(Math.abs(maxTurnSpeed), 0.0, 1.0);
+
+        return runOnce(() -> {
+            double currentDeg = normalizeHeading(m_gyro.getRotation2d().getDegrees());
+            m_headingPID.reset(currentDeg);
+            m_headingPID.setGoal(normalizedTargetDeg);
+        }).andThen(run(() -> {
+            double currentDeg = normalizeHeading(m_gyro.getRotation2d().getDegrees());
+            double turnCommand = m_headingPID.calculate(currentDeg);
+            turnCommand = MathUtil.clamp(turnCommand, -limitedMaxTurn, limitedMaxTurn);
+
+            // Invert to match current gyro/drive sign convention.
+            driveVelocity(0.0, -turnCommand);
+            m_diffDrive.feed();
+        }).until(m_headingPID::atGoal)
+                .finallyDo(interrupted -> {
+                    setWheelVelocities(new DifferentialDriveWheelSpeeds(0.0, 0.0));
+                    m_diffDrive.stopMotor();
+                }));
     }
 
     private void setWheelVelocities(DifferentialDriveWheelSpeeds speeds) {

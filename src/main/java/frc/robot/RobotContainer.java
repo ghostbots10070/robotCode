@@ -19,6 +19,7 @@ import frc.robot.commands.Eject;
 import frc.robot.commands.Intake;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+
 import static frc.robot.Constants.OperatorConstants.*;
 
 public class RobotContainer {
@@ -55,6 +56,10 @@ public class RobotContainer {
 
         SmartDashboard.putString("Speed Multiplier", "100%");
 
+        // Turn-to-heading dashboard test inputs
+        SmartDashboard.putNumber("TurnToAngle/SetAngleDeg", 90.0);
+        SmartDashboard.putNumber("TurnToAngle/MaxTurnSpeed", 0.2);
+
         //NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
         SlewRateLimiter filter = new SlewRateLimiter(1);
         SlewRateLimiter filter3 = new SlewRateLimiter(0.5);
@@ -72,6 +77,11 @@ public class RobotContainer {
 
         SmartDashboard.putData("Commands/move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .25));
         SmartDashboard.putData("Commands/move 2m forward", m_driveSubsystem.driveDistanceCommand(2.03, .15));
+
+        
+
+
+        
         SmartDashboard.putData("Commands/Intake (dashboard)", new Intake(m_fuelSubsystem));
         SmartDashboard.putData("Commands/Eject (dashboard)", new Eject(m_fuelSubsystem));
         SmartDashboard.putData("Commands/Climb Up (dashboard)", m_climberSubsystem.climbUpCommand());
@@ -82,6 +92,14 @@ public class RobotContainer {
         SmartDashboard.putData("Commands/Stop Climber", m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
         SmartDashboard.putData("Commands/Reset Climber", m_climberSubsystem.resetClimber());
         SmartDashboard.putData("Commands/Refresh Preferences", m_climberSubsystem.runOnce(() -> m_climberSubsystem.refreshPreferences()).ignoringDisable(true));
+
+        SmartDashboard.putData(
+            "Commands/Turn To Angle (dashboard)",
+            Commands.runOnce(() -> {
+                double targetDeg = SmartDashboard.getNumber("TurnToAngle/SetAngleDeg", 90.0);
+                double maxTurn = SmartDashboard.getNumber("TurnToAngle/MaxTurnSpeed", 0.2);
+                m_driveSubsystem.turnToAngleCommand(targetDeg, maxTurn).schedule();
+            }));
     }
 
     public Command getAutonomousCommand() {
