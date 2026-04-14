@@ -301,6 +301,9 @@ public class DriveSubsystem extends SubsystemBase {
             fwdSpeed *= -1;
         }
 
+        SmartDashboard.putNumber("Drive Command - Fwd", fwdSpeed);
+        SmartDashboard.putNumber("Drive Command - Rot", rotSpeed);
+
         if (m_closedLoopMode) {
             driveVelocity(fwdSpeed, rotSpeed);
             // without this we get motorsafety errors
@@ -317,20 +320,15 @@ public class DriveSubsystem extends SubsystemBase {
      * @param zRotation normalized angular command [-1..1], scaled to radians/second
      */
     private void driveVelocity(double xSpeed, double zRotation) {
-        // Convert inputs (-1 to 1) to m/s and rad/s
-        double targetLinear = xSpeed * kMaxSpeedMetersPerSecond;
-        double targetAngular = zRotation * kMaxAngularSpeedRadiansPerSecond;
+        // arcadeDriveIK handles the mixing correctly:
+        // left = xSpeed + zRotation
+        // right = xSpeed - zRotation
+        // then scales both down if either exceeds 1.0, preserving turn authority
+        var wheelPercents = DifferentialDrive.arcadeDriveIK(xSpeed, zRotation, false);
 
-        // Convert to chassis speeds
-        ChassisSpeeds chassisSpeeds = new ChassisSpeeds(targetLinear, 0, targetAngular);
-
-        // Convert to wheel speeds
-        DifferentialDriveWheelSpeeds wheelSpeeds = kDriveKinematics.toWheelSpeeds(chassisSpeeds);
-
-        // Desaturate (ensure we don't ask for more speed than possible)
-        wheelSpeeds.desaturate(kMaxSpeedMetersPerSecond);
-
-        setWheelVelocities(wheelSpeeds);
+        setWheelVelocities(new DifferentialDriveWheelSpeeds(
+                wheelPercents.left * kMaxSpeedMetersPerSecond,
+                wheelPercents.right * kMaxSpeedMetersPerSecond));
     }
 
     /**
@@ -506,6 +504,9 @@ public class DriveSubsystem extends SubsystemBase {
         if (m_loopCount++ % 5 == 0) {
             postCoords();
         }
+
+        SmartDashboard.putNumber("Left Velocity", m_encoderLeftLeader.getVelocity());
+        SmartDashboard.putNumber("Right Velocity", m_encoderRightLeader.getVelocity());
     }
 
     @Override

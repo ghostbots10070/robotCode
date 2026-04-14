@@ -39,6 +39,7 @@ public class ArcadeDrive extends Command {
         double speed = m_speedSupplier.getAsDouble();
         double turn = m_rotationSupplier.getAsDouble();
 
+        SmartDashboard.putNumber("Turn Input", turn);
         SmartDashboard.putNumber("Speed Input", speed);
 
         // 2. Apply Deadband (Crucial for preventing drift)
@@ -47,8 +48,9 @@ public class ArcadeDrive extends Command {
 
         // 4. (Optional) Square Inputs for finer control at low speeds
         // pure math requires keeping the sign (+/-)
-        speed = Math.copySign(speed * speed, speed);
-        turn = Math.copySign(turn * turn, turn);
+        double kCurve = 0.7; // 0=fully linear, 1=fully cubic
+speed = kCurve * Math.copySign(speed * speed * speed, speed) + (1 - kCurve) * speed;
+turn  = kCurve * Math.copySign(turn  * turn  * turn,  turn)  + (1 - kCurve) * turn;
 
         //System.out.println(turn);
 
