@@ -28,7 +28,6 @@ public class RobotContainer {
     public final DriveSubsystem m_driveSubsystem = new DriveSubsystem(m_cameraSubsystem::getLatestVisionData);
     private final ClimberSubsystem m_climberSubsystem = new ClimberSubsystem();
     private final FuelSubsystem m_fuelSubsystem = new FuelSubsystem();
-   
 
     private final CommandXboxController m_driverController = new CommandXboxController(DRIVER_CONTROLLER_PORT);
     private final CommandXboxController m_operatorController = new CommandXboxController(OPERATOR_CONTROLLER_PORT);
@@ -46,8 +45,9 @@ public class RobotContainer {
         autoChooser = AutoBuilder.buildAutoChooser();
 
         AutoRoutines routines = new AutoRoutines(m_driveSubsystem, m_fuelSubsystem, m_climberSubsystem);
-        //autoChooser.setDefaultOption("Basic HH Auto", routines.basicAuto());
-        //autoChooser.addOption("Encoder Position Auto", routines.encoderPositionAuto());
+        // autoChooser.setDefaultOption("Basic HH Auto", routines.basicAuto());
+        // autoChooser.addOption("Encoder Position Auto",
+        // routines.encoderPositionAuto());
         autoChooser.addOption("full auto", routines.fullAuto());
 
         SmartDashboard.putData("Auto Chooser", autoChooser);
@@ -60,16 +60,14 @@ public class RobotContainer {
         SmartDashboard.putNumber("TurnToAngle/SetAngleDeg", 90.0);
         SmartDashboard.putNumber("TurnToAngle/MaxTurnSpeed", 0.2);
 
-        //NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
-        SlewRateLimiter filter = new SlewRateLimiter(1);
-        SlewRateLimiter filter3 = new SlewRateLimiter(0.5);
+        // NamedCommands.registerCommand("Shoot", new LaunchSequence(m_fuelSubsystem));
+        SlewRateLimiter throttleFilter = new SlewRateLimiter(2.5); // units/sec — start here
+        SlewRateLimiter turnFilter = new SlewRateLimiter(2.0); // turns usually need less
+
         m_driveSubsystem.setDefaultCommand(new ArcadeDrive(
                 m_driveSubsystem,
-                () -> filter.calculate(-m_driverController.getLeftY()),
-                () -> -m_driverController.getRightX()
-                 
-        ));  
-
+                () -> throttleFilter.calculate(-m_driverController.getLeftY()),
+                () -> turnFilter.calculate(-m_driverController.getRightX())));
 
         m_fuelSubsystem.setDefaultCommand(m_fuelSubsystem.run(() -> m_fuelSubsystem.stop()));
 
@@ -78,10 +76,6 @@ public class RobotContainer {
         SmartDashboard.putData("Commands/move 1m forward", m_driveSubsystem.driveDistanceCommand(1.0, .25));
         SmartDashboard.putData("Commands/move 2m forward", m_driveSubsystem.driveDistanceCommand(2.03, .15));
 
-        
-
-
-        
         SmartDashboard.putData("Commands/Intake (dashboard)", new Intake(m_fuelSubsystem));
         SmartDashboard.putData("Commands/Eject (dashboard)", new Eject(m_fuelSubsystem));
         SmartDashboard.putData("Commands/Climb Up (dashboard)", m_climberSubsystem.climbUpCommand());
@@ -91,19 +85,20 @@ public class RobotContainer {
         SmartDashboard.putData("Commands/Auto L1 Climb", m_climberSubsystem.autoL1Climb());
         SmartDashboard.putData("Commands/Stop Climber", m_climberSubsystem.run(() -> m_climberSubsystem.stop()));
         SmartDashboard.putData("Commands/Reset Climber", m_climberSubsystem.resetClimber());
-        SmartDashboard.putData("Commands/Refresh Preferences", m_climberSubsystem.runOnce(() -> m_climberSubsystem.refreshPreferences()).ignoringDisable(true));
+        SmartDashboard.putData("Commands/Refresh Preferences",
+                m_climberSubsystem.runOnce(() -> m_climberSubsystem.refreshPreferences()).ignoringDisable(true));
 
         SmartDashboard.putData(
-            "Commands/Turn To Angle (dashboard)",
-            Commands.runOnce(() -> {
-                double targetDeg = SmartDashboard.getNumber("TurnToAngle/SetAngleDeg", 90.0);
-                double maxTurn = SmartDashboard.getNumber("TurnToAngle/MaxTurnSpeed", 0.2);
-                m_driveSubsystem.turnToAngleCommand(targetDeg, maxTurn).schedule();
-            }));
+                "Commands/Turn To Angle (dashboard)",
+                Commands.runOnce(() -> {
+                    double targetDeg = SmartDashboard.getNumber("TurnToAngle/SetAngleDeg", 90.0);
+                    double maxTurn = SmartDashboard.getNumber("TurnToAngle/MaxTurnSpeed", 0.2);
+                    m_driveSubsystem.turnToAngleCommand(targetDeg, maxTurn).schedule();
+                }));
 
         SmartDashboard.putData(
-            "Commands/Turn To Hub (dashboard)",
-            Commands.runOnce(() -> m_driveSubsystem.turnToHubCommand().schedule()));
+                "Commands/Turn To Hub (dashboard)",
+                Commands.runOnce(() -> m_driveSubsystem.turnToHubCommand().schedule()));
     }
 
     public Command getAutonomousCommand() {
@@ -122,33 +117,32 @@ public class RobotContainer {
         m_driverController.leftTrigger().onTrue(Commands.runOnce(() -> m_driveSubsystem.turnToHubCommand().schedule()));
         m_driverController.rightTrigger().onTrue(Commands.runOnce(m_driveSubsystem::resetGyro, m_driveSubsystem));
 
-
         m_driverController.a()
-            .and(m_driverController.rightBumper().negate())
-            .onTrue(m_driveSubsystem.setMaxSpeed(1.0));
+                .and(m_driverController.rightBumper().negate())
+                .onTrue(m_driveSubsystem.setMaxSpeed(1.0));
 
         m_driverController.b()
-            .and(m_driverController.rightBumper().negate())
-            .onTrue(m_driveSubsystem.setMaxSpeed(0.25));
+                .and(m_driverController.rightBumper().negate())
+                .onTrue(m_driveSubsystem.setMaxSpeed(0.25));
 
         m_driverController.x()
-            .and(m_driverController.rightBumper().negate())
-            .onTrue(m_driveSubsystem.setMaxSpeed(0.75));
+                .and(m_driverController.rightBumper().negate())
+                .onTrue(m_driveSubsystem.setMaxSpeed(0.75));
 
         m_driverController.y()
-            .and(m_driverController.rightBumper().negate())
-            .onTrue(m_driveSubsystem.setMaxSpeed(0.5));
+                .and(m_driverController.rightBumper().negate())
+                .onTrue(m_driveSubsystem.setMaxSpeed(0.5));
 
         // sysid commands
         m_driverController.rightBumper().and(m_driverController.y()).whileTrue(
-            m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
+                m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
         m_driverController.rightBumper().and(m_driverController.x()).whileTrue(
-            m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+                m_driveSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
         m_driverController.rightBumper().and(m_driverController.a()).whileTrue(
-            m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+                m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
         m_driverController.rightBumper().and(m_driverController.b()).whileTrue(
-            m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+                m_driveSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
 
         // Operator Controls
         m_operatorController.leftTrigger().whileTrue(new Intake(m_fuelSubsystem)); // gets ready to intake stuff
